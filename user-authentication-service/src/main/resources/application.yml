@@ -1,0 +1,19 @@
+server:
+  port: 8089
+spring:
+  application:
+    name: userauthenticationservice
+  datasource:
+    url: jdbc:mysql://localhost:3306/userdb?useSSL=false&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL5Dialect
+  show-sql: true
+jwt:
+  secret:
+    key: testsecretkey
