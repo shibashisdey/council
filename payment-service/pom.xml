@@ -3,19 +3,16 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>com.stackroute</groupId>
-		<artifactId>stackful-minds</artifactId>
+		<groupId>com.council</groupId>
+		<artifactId>council</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.stackroute</groupId>
+	<groupId>com.council</groupId>
 	<artifactId>payment-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>payment-service</name>
-	<description>Demo project for Spring Boot</description>
-	<properties>
-		<java.version>11</java.version>
-	</properties>
+	<description>Payment service for the Council application</description>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
