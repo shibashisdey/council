@@ -47,7 +47,7 @@ public class Counselor {
     private String qualification;
 
     @Column(nullable = false)
-    private int experienceYears;
+    private Integer experienceYears;
 
     @Column(length = 1000)
     private String bio;

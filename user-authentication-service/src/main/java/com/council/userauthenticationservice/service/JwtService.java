@@ -23,13 +23,16 @@ public class JwtService {
         this.expiration = expiration;
     }
 
-    public String generateToken(String email) {
+    public String generateToken(Long userId, String email, String role) {
         Date now = new Date();
         return Jwts.builder()
                 .setSubject(email)
+                .claim("userId", userId)
+                .claim("role", role)
                 .setIssuedAt(now)
                 .setExpiration(new Date(now.getTime() + expiration))
                 .signWith(key)
                 .compact();
     }
+
 }

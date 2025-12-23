@@ -11,7 +11,7 @@ import java.util.Set;
 @Service
 public interface CounselorService {
 
-    CounselorResponse createCounselor(CreateCounselorRequest counselor);
+    CounselorResponse createCounselor(Long userId,CreateCounselorRequest counselor,String role);
 
     CounselorResponse getByUserId(Long userId);
 
@@ -19,8 +19,12 @@ public interface CounselorService {
 
     CounselorResponse getById(Long counselorId);
 
-    CounselorResponse updateCounselor(Long counselorId, UpdateCounselorRequest request);
 
 
-
+    CounselorResponse updateCounselor(
+            Long counselorId,
+            Long userId,
+            String role,
+            UpdateCounselorRequest request
+    );
 }

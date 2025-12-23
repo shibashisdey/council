@@ -15,7 +15,7 @@ public class UpdateCounselorRequest {
 
     private String qualification;
 
-    private int experienceYears;
+    private Integer experienceYears;
 
     private String bio;
 

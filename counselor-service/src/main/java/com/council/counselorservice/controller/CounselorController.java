@@ -26,10 +26,24 @@ public class CounselorController {
      */
     @PostMapping
     public ResponseEntity<CounselorResponse> createCounselor(
+            @RequestHeader("X-USER-ID") Long userId,
+            @RequestHeader("X-USER-ROLE") String role,
             @RequestBody CreateCounselorRequest request
     ) {
-        CounselorResponse response = counselorService.createCounselor(request);
+        CounselorResponse response =
+                counselorService.createCounselor(userId, request, role);
+
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    /**
+     * Get own counselor profile (THERAPIST)
+     */
+    @GetMapping("/me")
+    public ResponseEntity<CounselorResponse> getMyProfile(
+            @RequestHeader("X-USER-ID") Long userId
+    ) {
+        return ResponseEntity.ok(counselorService.getByUserId(userId));
     }
 
     /**
@@ -54,12 +68,17 @@ public class CounselorController {
     public CounselorResponse getCounselorById(@PathVariable Long id) {
         return counselorService.getById(id);
     }
+
     @PutMapping("/{id}")
     public ResponseEntity<CounselorResponse> updateCounselor(
             @PathVariable Long id,
+            @RequestHeader("X-USER-ID") Long userId,
+            @RequestHeader("X-USER-ROLE") String role,
             @RequestBody UpdateCounselorRequest request
     ) {
-        CounselorResponse response = counselorService.updateCounselor(id, request);
+        CounselorResponse response =
+                counselorService.updateCounselor(id, userId, role, request);
         return ResponseEntity.ok(response);
     }
+
 }

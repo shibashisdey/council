@@ -44,14 +44,54 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String token = authHeader.substring(7);
 
         try {
-            Jwts.parserBuilder()
+            var claims = Jwts.parserBuilder()
                     .setSigningKey(secretKey)
                     .build()
-                    .parseClaimsJws(token);
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            String email = claims.getSubject();
+            String role = claims.get("role", String.class);
+
+            Long userId = claims.get("userId", Integer.class).longValue();
+
+            // 🔐 ROLE-BASED AUTHORIZATION (ADD HERE)
+            if (path.startsWith("/counselors")) {
+
+                String method = exchange.getRequest().getMethod().name();
+
+
+                // Only THERAPIST can create or update counselor profile
+                if ((method.equals("POST") || method.equals("PUT")|| method.equals("PATCH"))
+                        && !"THERAPIST".equals(role)) {
+
+                    exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                    return exchange.getResponse().setComplete();
+                }
+                // Read operations → CLIENT or THERAPIST
+                if (method.equals("GET")
+                        && !("CLIENT".equals(role) || "THERAPIST".equals(role))) {
+                    exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                    return exchange.getResponse().setComplete();
+                }
+
+            }
+
+
+            // Attach trusted headers for downstream services
+            exchange = exchange.mutate()
+                    .request(r -> r
+                            .header("X-USER-ID", String.valueOf(userId))
+                            .header("X-USER-EMAIL", email)
+                            .header("X-USER-ROLE", role)
+                    )
+                    .build();
+
         } catch (Exception e) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
+
 
         return chain.filter(exchange);
     }

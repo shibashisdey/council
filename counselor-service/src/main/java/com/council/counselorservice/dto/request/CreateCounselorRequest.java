@@ -9,7 +9,7 @@ import java.util.Set;
 @Setter
 public class CreateCounselorRequest {
 
-    private Long userId; // from auth-service
+    //private Long userId; // from auth-service
 
     private String fullName;
 
@@ -17,7 +17,7 @@ public class CreateCounselorRequest {
 
     private String qualification;
 
-    private int experienceYears;
+    private Integer experienceYears;
 
     private String bio;
 

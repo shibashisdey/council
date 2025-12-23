@@ -2,15 +2,14 @@ package com.council.counselorservice.service;
 import com.council.counselorservice.dto.request.CreateCounselorRequest;
 import com.council.counselorservice.dto.request.UpdateCounselorRequest;
 import com.council.counselorservice.dto.response.CounselorResponse;
+import com.council.counselorservice.exception.AccessDeniedException;
+import com.council.counselorservice.exception.ResourceNotFoundException;
 import com.council.counselorservice.model.Counselor;
 import com.council.counselorservice.model.Specialization;
 import com.council.counselorservice.repository.CounselorRepository;
 import com.council.counselorservice.repository.SpecializationRepository;
-import com.council.counselorservice.service.CounselorService;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -48,14 +47,16 @@ public class CounselorServiceImpl implements CounselorService {
 //        counselor.setSpecializations(managedSpecializations);
 //        return counselorRepository.save(counselor);
 //    }
-    public CounselorResponse createCounselor(CreateCounselorRequest request) {
-
-        if (counselorRepository.existsByUserId(request.getUserId())) {
+    public CounselorResponse createCounselor(Long userId,CreateCounselorRequest request,String role) {
+        if (!"THERAPIST".equals(role)) {
+            throw new AccessDeniedException("Only therapists can create counselor profiles");
+        }
+        if (counselorRepository.existsByUserId(userId)) {
             throw new IllegalStateException("Counselor profile already exists");
         }
 
         Counselor counselor = new Counselor();
-        counselor.setUserId(request.getUserId());
+        counselor.setUserId(userId);
         counselor.setFullName(request.getFullName());
         counselor.setQualification(request.getQualification());
         counselor.setExperienceYears(request.getExperienceYears());
@@ -83,11 +84,12 @@ public class CounselorServiceImpl implements CounselorService {
     @Override
 //    public Counselor getByUserId(Long userId) {
 //        return counselorRepository.findByUserId(userId)
-//                .orElseThrow(() -> new IllegalArgumentException("Counselor not found"));
+//                .orElseThrow(() -> new ResourceNotFoundException("Counselor not found"));
 //    }
     public CounselorResponse getByUserId(Long userId) {
         Counselor counselor = counselorRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Counselor not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Counselor not found"));
+
 
         return mapToResponse(counselor);
     }
@@ -108,7 +110,8 @@ public class CounselorServiceImpl implements CounselorService {
     @Override
     public CounselorResponse getById(Long counselorId) {
         Counselor counselor = counselorRepository.findById(counselorId)
-                .orElseThrow(() -> new IllegalArgumentException("Counselor not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Counselor not found"));
+
 
         return mapToResponse(counselor);
     }
@@ -133,10 +136,26 @@ public class CounselorServiceImpl implements CounselorService {
                 .build();
     }
     @Override
-    public CounselorResponse updateCounselor(Long counselorId, UpdateCounselorRequest request) {
+    public CounselorResponse updateCounselor(
+            Long counselorId,
+            Long userId,
+            String role,
+            UpdateCounselorRequest request
+    )
+    {
+        if (!"THERAPIST".equals(role)) {
+            throw new AccessDeniedException("Only therapists can update counselor profiles");
+        }
 
         Counselor counselor = counselorRepository.findById(counselorId)
-                .orElseThrow(() -> new IllegalArgumentException("Counselor not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Counselor not found"));
+
+
+        if (!counselor.getUserId().equals(userId)) {
+            throw new AccessDeniedException("You are not allowed to update this profile");
+
+        }
+
 
         // Update simple fields
         if (request.getFullName() != null) {
@@ -147,9 +166,10 @@ public class CounselorServiceImpl implements CounselorService {
             counselor.setQualification(request.getQualification());
         }
 
-        if (request.getExperienceYears() > 0) {
+        if (request.getExperienceYears() != null) {
             counselor.setExperienceYears(request.getExperienceYears());
         }
+
 
         if (request.getBio() != null) {
             counselor.setBio(request.getBio());
