@@ -1,0 +1,84 @@
+package com.council.appointmentservice.controller;
+
+import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
+import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
+import com.council.appointmentservice.dto.response.AppointmentResponse;
+import com.council.appointmentservice.dto.response.CounselorAppointmentResponse;
+import com.council.appointmentservice.service.AppointmentService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/appointments")
+public class AppointmentController {
+
+    private final AppointmentService appointmentService;
+
+    public AppointmentController(AppointmentService appointmentService) {
+        this.appointmentService = appointmentService;
+    }
+
+    /**
+     * CLIENT → Book appointment (slot locked)
+     */
+    @PostMapping
+    public ResponseEntity<AppointmentResponse> createAppointment(
+            @RequestHeader("X-USER-ID") Long clientId,
+            @RequestBody CreateAppointmentRequest request
+    ) {
+        return new ResponseEntity<>(
+                appointmentService.createAppointment(clientId, request),
+                HttpStatus.CREATED
+        );
+    }
+
+    /**
+     * CLIENT → View own appointments
+     */
+    @GetMapping("/client")
+    public List<AppointmentResponse> getClientAppointments(
+            @RequestHeader("X-USER-ID") Long clientId
+    ) {
+        return appointmentService.getAppointmentsForClient(clientId);
+    }
+
+    /**
+     * COUNSELOR → View own appointments
+     */
+    @GetMapping("/counselor/{counselorId}")
+    public List<CounselorAppointmentResponse> getCounselorAppointments(
+            @PathVariable Long counselorId
+    ) {
+        return appointmentService.getAppointmentsForCounselor(counselorId);
+    }
+
+    /**
+     * CLIENT → Reschedule appointment
+     */
+    @PutMapping("/{appointmentId}/reschedule")
+    public AppointmentResponse rescheduleAppointment(
+            @PathVariable Long appointmentId,
+            @RequestHeader("X-USER-ID") Long clientId,
+            @RequestBody RescheduleAppointmentRequest request
+    ) {
+        return appointmentService.rescheduleAppointment(
+                appointmentId, clientId, request
+        );
+    }
+
+    /**
+     * CLIENT / COUNSELOR → Cancel appointment
+     */
+    @DeleteMapping("/{appointmentId}")
+    public ResponseEntity<Void> cancelAppointment(
+            @PathVariable Long appointmentId,
+            @RequestHeader("X-USER-ID") Long userId,
+            @RequestHeader("X-USER-ROLE") String role
+    ) {
+        appointmentService.cancelAppointment(appointmentId, userId, role);
+        return ResponseEntity.noContent().build();
+    }
+}
