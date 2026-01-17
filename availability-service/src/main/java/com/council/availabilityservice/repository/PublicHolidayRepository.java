@@ -14,6 +14,18 @@ public interface PublicHolidayRepository
 
     Optional<PublicHoliday> findByHolidayDate(LocalDate date);
 
+    List<PublicHoliday> findByHolidayDateBefore(LocalDate cutoffDate);
+
+    List<PublicHoliday> findByHolidayDateGreaterThanEqualAndHolidayDateLessThanEqual(
+            LocalDate start,
+            LocalDate end
+    );
+
+    Optional<PublicHoliday> findByHolidayDateAndCountryCode(
+            LocalDate date,
+            String countryCode
+    );
+
     List<PublicHoliday> findByHolidayDateBetween(
             LocalDate start,
             LocalDate end

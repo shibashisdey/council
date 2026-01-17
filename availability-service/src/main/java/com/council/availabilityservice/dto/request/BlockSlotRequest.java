@@ -1,0 +1,19 @@
+package com.council.availabilityservice.dto.request;
+
+import com.council.availabilityservice.model.UnavailabilityReason;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+@Getter
+@Setter
+public class BlockSlotRequest {
+
+    private Long counselorId;
+    private LocalDate date;
+    private LocalTime startTime;
+    private UnavailabilityReason reason;
+    private Long referenceId;
+}

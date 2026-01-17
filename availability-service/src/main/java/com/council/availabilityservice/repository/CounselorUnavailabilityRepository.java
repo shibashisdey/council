@@ -1,12 +1,14 @@
 package com.council.availabilityservice.repository;
 
 import com.council.availabilityservice.model.CounselorUnavailability;
+import com.council.availabilityservice.model.UnavailabilityReason;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CounselorUnavailabilityRepository
@@ -24,9 +26,21 @@ public interface CounselorUnavailabilityRepository
             LocalTime startTime
     );
 
+    Optional<CounselorUnavailability> findTopByReferenceIdAndActiveTrueOrderByDateDesc(Long referenceId);
+
+    boolean existsByReferenceIdAndActiveTrue(Long referenceId);
+
+    long countByCounselorIdAndDateAndActiveTrueAndReason(
+            Long counselorId,
+            LocalDate date,
+            UnavailabilityReason reason
+    );
+
     List<CounselorUnavailability> findByCounselorIdAndActiveTrue(
             Long counselorId
     );
+
+    List<CounselorUnavailability> findByReferenceId(Long referenceId);
 
     List<CounselorUnavailability> findByDateBefore(LocalDate cutoffDate);
 }

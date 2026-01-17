@@ -36,4 +36,10 @@ public interface AvailabilityService {
      * Free slot when appointment cancelled / expired / rescheduled
      */
     void freeSlot(Long referenceId);
+
+    /**
+     * INTERNAL
+     * Update the reason for an existing block
+     */
+    void updateBlockReason(Long referenceId, UnavailabilityReason newReason);
 }
