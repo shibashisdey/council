@@ -42,4 +42,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             AppointmentStatus status,
             LocalDateTime time
     );
+    boolean existsByClientIdAndAppointmentDateAndStartTimeAndStatusIn(
+            Long clientId,
+            LocalDate date,
+            LocalTime startTime,
+            List<AppointmentStatus> statuses
+    );
 }

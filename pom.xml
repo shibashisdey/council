@@ -34,6 +34,7 @@
 		<module>payment-service</module>
 		<module>product-webapp</module>
 		<module>user-service</module>
+		<module>availability-service</module>
 	</modules>
 
 	<!-- Global properties -->

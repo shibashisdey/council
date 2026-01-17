@@ -14,6 +14,9 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
 
+import static com.council.appointmentservice.model.AppointmentStatus.CONFIRMED;
+import static com.council.appointmentservice.model.AppointmentStatus.PENDING_PAYMENT;
+
 @Service
 public class AppointmentServiceImpl implements AppointmentService {
 
@@ -42,8 +45,8 @@ public class AppointmentServiceImpl implements AppointmentService {
                         request.getAppointmentDate(),
                         request.getStartTime(),
                         List.of(
-                                AppointmentStatus.CONFIRMED,
-                                AppointmentStatus.PENDING_PAYMENT
+                                CONFIRMED,
+                                PENDING_PAYMENT
                         )
                 );
 
@@ -58,7 +61,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setAppointmentDate(request.getAppointmentDate());
         appointment.setStartTime(request.getStartTime());
         appointment.setEndTime(request.getStartTime().plusHours(SLOT_DURATION_HOURS));
-        appointment.setStatus(AppointmentStatus.PENDING_PAYMENT);
+        appointment.setStatus(PENDING_PAYMENT);
         appointment.setSlotLockedAt(LocalDateTime.now());
 
         Appointment saved = appointmentRepository.save(appointment);
@@ -114,8 +117,8 @@ public class AppointmentServiceImpl implements AppointmentService {
                         request.getNewDate(),
                         request.getNewStartTime(),
                         List.of(
-                                AppointmentStatus.CONFIRMED,
-                                AppointmentStatus.PENDING_PAYMENT
+                                CONFIRMED,
+                                PENDING_PAYMENT
                         )
                 );
 
@@ -189,5 +192,16 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .endTime(a.getEndTime())
                 .status(a.getStatus())
                 .build();
+    }
+    boolean clientBusy =
+            appointmentRepository.existsByClientIdAndAppointmentDateAndStartTimeAndStatusIn(
+                    clientId,
+                    request.getAppointmentDate(),
+                    request.getStartTime(),
+                    List.of(CONFIRMED, PENDING_PAYMENT)
+            );
+
+if (clientBusy) {
+        throw new IllegalStateException("You already have an appointment at this time");
     }
 }
