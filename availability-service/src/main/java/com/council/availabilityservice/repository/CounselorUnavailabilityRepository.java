@@ -43,4 +43,5 @@ public interface CounselorUnavailabilityRepository
     List<CounselorUnavailability> findByReferenceId(Long referenceId);
 
     List<CounselorUnavailability> findByDateBefore(LocalDate cutoffDate);
+
 }
