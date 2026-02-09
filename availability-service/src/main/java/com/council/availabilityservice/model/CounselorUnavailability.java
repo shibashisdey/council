@@ -11,10 +11,7 @@ import java.time.LocalTime;
 @Table(
         name = "counselor_unavailability",
         indexes = {
-                @Index(
-                        name = "idx_counselor_date",
-                        columnList = "counselor_id, date"
-                )
+                @Index(name = "idx_counselor_date", columnList = "counselor_id, date")
         }
 )
 @Getter
@@ -41,15 +38,9 @@ public class CounselorUnavailability {
     @Column(nullable = false)
     private UnavailabilityReason reason;
 
-    /**
-     * Reference to appointmentId / leaveId etc.
-     */
     @Column(name = "reference_id")
     private Long referenceId;
 
-    /**
-     * Soft delete flag (important!)
-     */
     @Column(nullable = false)
     private boolean active = true;
 }

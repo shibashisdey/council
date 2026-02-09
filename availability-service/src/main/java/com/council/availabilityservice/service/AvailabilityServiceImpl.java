@@ -2,17 +2,15 @@ package com.council.availabilityservice.service;
 
 import com.council.availabilityservice.model.CounselorUnavailability;
 import com.council.availabilityservice.model.CounselorWorkingHours;
+import com.council.availabilityservice.model.LunchBreak;
 import com.council.availabilityservice.model.UnavailabilityReason;
 import com.council.availabilityservice.repository.CounselorUnavailabilityRepository;
 import com.council.availabilityservice.repository.CounselorWorkingHoursRepository;
+import com.council.availabilityservice.repository.LunchBreakRepository;
 import com.council.availabilityservice.repository.PublicHolidayRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.council.availabilityservice.model.LunchBreak;
-import com.council.availabilityservice.model.PublicHoliday;
-import com.council.availabilityservice.repository.LunchBreakRepository;
-import org.springframework.scheduling.annotation.Scheduled;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -25,25 +23,21 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     private final CounselorUnavailabilityRepository unavailabilityRepository;
     private final CounselorWorkingHoursRepository workingHoursRepository;
-    private final PublicHolidayRepository holidayRepository;
     private final LunchBreakRepository lunchBreakRepository;
+    private final PublicHolidayRepository holidayRepository;
 
     public AvailabilityServiceImpl(
             CounselorUnavailabilityRepository unavailabilityRepository,
             CounselorWorkingHoursRepository workingHoursRepository,
-            PublicHolidayRepository holidayRepository,
-            LunchBreakRepository lunchBreakRepository
+            LunchBreakRepository lunchBreakRepository,
+            PublicHolidayRepository holidayRepository
     ) {
         this.unavailabilityRepository = unavailabilityRepository;
         this.workingHoursRepository = workingHoursRepository;
-        this.holidayRepository = holidayRepository;
         this.lunchBreakRepository = lunchBreakRepository;
+        this.holidayRepository = holidayRepository;
     }
 
-    /**
-     * INTERNAL
-     * Used by Appointment Service before booking
-     */
     @Override
     public boolean isSlotAvailable(
             Long counselorId,
@@ -51,37 +45,32 @@ public class AvailabilityServiceImpl implements AvailabilityService {
             LocalTime startTime,
             LocalTime endTime
     ) {
-
-        /* 1️⃣ Public holiday */
         if (holidayRepository.findByHolidayDate(date).isPresent()) {
             return false;
         }
 
-        /* 2️⃣ Check working hours */
         DayOfWeek dayOfWeek = date.getDayOfWeek();
         CounselorWorkingHours workingHours =
                 workingHoursRepository.findByCounselorIdAndDayOfWeek(counselorId, dayOfWeek)
                         .orElse(null);
-
         if (workingHours == null) {
-            return false; // Not working on this day
+            return false;
         }
 
-        if (startTime.isBefore(workingHours.getStartTime()) || endTime.isAfter(workingHours.getEndTime())) {
-            return false; // Outside working hours
+        if (startTime.isBefore(workingHours.getStartTime())
+                || endTime.isAfter(workingHours.getEndTime())) {
+            return false;
         }
 
-        /* 3️⃣ Check for Lunch Break Overlap */
         Optional<LunchBreak> lunchBreakOpt = lunchBreakRepository.findByCounselorId(counselorId);
         if (lunchBreakOpt.isPresent()) {
             LunchBreak lunch = lunchBreakOpt.get();
-            // Overlap check: existing.start < requested.end AND existing.end > requested.start
-            if (lunch.getStartTime().isBefore(endTime) && lunch.getEndTime().isAfter(startTime)) {
+            if (lunch.getStartTime().isBefore(endTime)
+                    && lunch.getEndTime().isAfter(startTime)) {
                 return false;
             }
         }
 
-        /* 4️⃣ Check for other overlapping unavailability (Leaves, Appointments) */
         boolean overlapExists =
                 unavailabilityRepository
                         .existsByCounselorIdAndDateAndActiveTrueAndStartTimeLessThanAndEndTimeGreaterThan(
@@ -90,12 +79,10 @@ public class AvailabilityServiceImpl implements AvailabilityService {
                                 endTime,
                                 startTime
                         );
-
         if (overlapExists) {
             return false;
         }
 
-        /* 5️⃣ Check for 7-hour daily limit */
         long confirmedAppointments = unavailabilityRepository
                 .countByCounselorIdAndDateAndActiveTrueAndReason(
                         counselorId,
@@ -103,17 +90,9 @@ public class AvailabilityServiceImpl implements AvailabilityService {
                         UnavailabilityReason.APPOINTMENT_CONFIRMED
                 );
 
-        if (confirmedAppointments >= 7) {
-            return false;
-        }
-
-        return true; // If all checks pass, the slot is available
+        return confirmedAppointments < 7;
     }
 
-    /**
-     * INTERNAL
-     * Lock slot for appointment (HOLD / CONFIRMED)
-     */
     @Override
     public void blockSlot(
             Long counselorId,
@@ -123,10 +102,8 @@ public class AvailabilityServiceImpl implements AvailabilityService {
             UnavailabilityReason reason,
             Long referenceId
     ) {
-
-        // IDEMPOTENCY CHECK: Do not create a duplicate block if one already exists.
-        if (unavailabilityRepository.existsByReferenceIdAndActiveTrue(referenceId)) {
-            return; // Already blocked, do nothing.
+        if (referenceId != null && unavailabilityRepository.existsByReferenceIdAndActiveTrue(referenceId)) {
+            return;
         }
 
         CounselorUnavailability unavailability = new CounselorUnavailability();
@@ -140,28 +117,12 @@ public class AvailabilityServiceImpl implements AvailabilityService {
         unavailabilityRepository.save(unavailability);
     }
 
-    /**
-     * INTERNAL
-     * Free slot when appointment cancelled / expired / rescheduled
-     */
-    @Override
-    public void freeSlot(Long referenceId) {
-
-        List<CounselorUnavailability> records =
-                unavailabilityRepository.findByReferenceId(referenceId);
-
-        for (CounselorUnavailability record : records) {
-            record.setActive(false);
-            unavailabilityRepository.save(record);
-        }
-    }
-
-    /**
-     * INTERNAL
-     * Update the reason for an existing block. Idempotent.
-     */
     @Override
     public void updateBlockReason(Long referenceId, UnavailabilityReason newReason) {
+        if (referenceId == null || newReason == null) {
+            return;
+        }
+
         unavailabilityRepository.findTopByReferenceIdAndActiveTrueOrderByDateDesc(referenceId)
                 .ifPresent(unavailability -> {
                     unavailability.setReason(newReason);
@@ -169,66 +130,17 @@ public class AvailabilityServiceImpl implements AvailabilityService {
                 });
     }
 
-    // ===========================================
-    // Schedulers for data retention and holidays
-    // ===========================================
+    @Override
+    public void freeSlot(Long referenceId) {
+        if (referenceId == null) {
+            return;
+        }
 
-    /**
-     * Daily scheduler:
-     * - Delete unavailability records older than today
-     * - Delete holiday records older than today
-     * - Refresh public holidays from Google Calendar (mock for now)
-     */
-    @Scheduled(cron = "0 0 0 * * ?") // Runs every day at midnight
-    public void dailyCleanupAndHolidayRefresh() {
-        LocalDate today = LocalDate.now();
-        LocalDate cutoffDate = today.minusDays(1); // Records older than yesterday
-
-        // Delete unavailability records older than today
-        // Note: soft deleted records are not explicitly deleted here, only truly inactive ones.
-        // For hard deletion, need to query by active=false and date < today.
-        // For now, only hard delete truly old records, soft delete for cancellation/free.
-        unavailabilityRepository.deleteAll(
-                unavailabilityRepository.findByDateBefore(cutoffDate)
-        );
-
-        // Delete holiday records older than today
-        holidayRepository.deleteAll(
-                holidayRepository.findByHolidayDateBefore(cutoffDate)
-        );
-
-        // Refresh public holidays (mock for now)
-        refreshPublicHolidays();
-    }
-
-    private void refreshPublicHolidays() {
-        // This is a mock implementation.
-        // In a real scenario, this would call Google Calendar API.
-        // For now, it adds a few fixed holidays for the next 45 days.
-
-        LocalDate today = LocalDate.now();
-        LocalDate fortyFiveDaysFromNow = today.plusDays(45);
-
-        // Clear existing holidays within the window to ensure we only store 45 days ahead
-        holidayRepository.deleteAll(
-                holidayRepository.findByHolidayDateGreaterThanEqualAndHolidayDateLessThanEqual(
-                        today, fortyFiveDaysFromNow
-                )
-        );
-
-        // Example mock holidays (replace with actual API calls)
-        addMockHoliday(today.plusDays(7), "Mock Holiday 1", "IN");
-        addMockHoliday(today.plusDays(15), "Mock Holiday 2", "IN");
-        addMockHoliday(today.plusDays(30), "Mock Holiday 3", "IN");
-    }
-
-    private void addMockHoliday(LocalDate date, String name, String countryCode) {
-        if (holidayRepository.findByHolidayDateAndCountryCode(date, countryCode).isEmpty()) {
-            PublicHoliday holiday = new PublicHoliday();
-            holiday.setHolidayDate(date);
-            holiday.setName(name);
-            holiday.setCountryCode(countryCode);
-            holidayRepository.save(holiday);
+        List<CounselorUnavailability> records =
+                unavailabilityRepository.findByReferenceId(referenceId);
+        for (CounselorUnavailability record : records) {
+            record.setActive(false);
+            unavailabilityRepository.save(record);
         }
     }
 }

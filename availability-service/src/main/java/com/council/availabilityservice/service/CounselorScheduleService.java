@@ -1,43 +1,22 @@
 package com.council.availabilityservice.service;
+
 import com.council.availabilityservice.dto.request.AddUnavailabilityRequest;
+import com.council.availabilityservice.dto.request.SetLunchBreakRequest;
 import com.council.availabilityservice.dto.request.SetWorkingHoursRequest;
 import com.council.availabilityservice.dto.response.CounselorAvailabilityResponse;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
-@Service
+
 public interface CounselorScheduleService {
 
-    /**
-     * Counselor sets weekly working hours
-     */
-    void setWorkingHours(
-            Long counselorId,
-            SetWorkingHoursRequest request
-    );
+    void setWorkingHours(Long counselorId, SetWorkingHoursRequest request);
 
-    /**
-     * Counselor marks unavailability (leave / lunch / etc.)
-     */
-    void addUnavailability(
-            Long counselorId,
-            AddUnavailabilityRequest request
-    );
+    void setLunchBreak(Long counselorId, SetLunchBreakRequest request);
 
-    /**
-     * Counselor cancels previously added unavailability
-     */
-    void cancelUnavailability(
-            Long counselorId,
-            Long unavailabilityId
-    );
+    void addUnavailability(Long counselorId, AddUnavailabilityRequest request);
 
-    /**
-     * Calendar view for counselor / UI
-     */
-    List<CounselorAvailabilityResponse> getAvailabilityForDate(
-            Long counselorId,
-            LocalDate date
-    );
+    void cancelUnavailability(Long counselorId, Long unavailabilityId);
+
+    List<CounselorAvailabilityResponse> getAvailabilityForDate(Long counselorId, LocalDate date);
 }

@@ -10,10 +10,10 @@ import java.time.LocalTime;
 @Getter
 @Setter
 public class BlockSlotRequest {
-
     private Long counselorId;
     private LocalDate date;
     private LocalTime startTime;
+    private LocalTime endTime;
     private UnavailabilityReason reason;
     private Long referenceId;
 }

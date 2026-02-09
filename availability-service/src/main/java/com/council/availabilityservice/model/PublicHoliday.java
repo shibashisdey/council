@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @Table(
         name = "public_holidays",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = "holiday_date")
+                @UniqueConstraint(columnNames = {"holiday_date", "country_code"})
         }
 )
 @Getter
@@ -27,6 +27,6 @@ public class PublicHoliday {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String countryCode; // IN, US, etc.
+    @Column(name = "country_code", nullable = false)
+    private String countryCode;
 }

@@ -26,7 +26,9 @@ public interface CounselorUnavailabilityRepository
             LocalTime startTime
     );
 
-    Optional<CounselorUnavailability> findTopByReferenceIdAndActiveTrueOrderByDateDesc(Long referenceId);
+    Optional<CounselorUnavailability> findTopByReferenceIdAndActiveTrueOrderByDateDesc(
+            Long referenceId
+    );
 
     boolean existsByReferenceIdAndActiveTrue(Long referenceId);
 
@@ -36,12 +38,7 @@ public interface CounselorUnavailabilityRepository
             UnavailabilityReason reason
     );
 
-    List<CounselorUnavailability> findByCounselorIdAndActiveTrue(
-            Long counselorId
-    );
-
     List<CounselorUnavailability> findByReferenceId(Long referenceId);
 
     List<CounselorUnavailability> findByDateBefore(LocalDate cutoffDate);
-
 }

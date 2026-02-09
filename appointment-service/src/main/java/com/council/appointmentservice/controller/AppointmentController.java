@@ -3,6 +3,7 @@ package com.council.appointmentservice.controller;
 import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
 import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
 import com.council.appointmentservice.dto.response.AppointmentResponse;
+import com.council.appointmentservice.dto.response.AppointmentStatusResponse;
 import com.council.appointmentservice.dto.response.CounselorAppointmentResponse;
 import com.council.appointmentservice.service.AppointmentService;
 import org.springframework.http.HttpStatus;
@@ -80,5 +81,25 @@ public class AppointmentController {
     ) {
         appointmentService.cancelAppointment(appointmentId, userId, role);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * INTERNAL -> Confirm appointment after payment success
+     */
+    @PutMapping("/{appointmentId}/confirm")
+    public AppointmentResponse confirmAppointment(
+            @PathVariable Long appointmentId
+    ) {
+        return appointmentService.confirmAppointment(appointmentId);
+    }
+
+    /**
+     * INTERNAL -> Get appointment status
+     */
+    @GetMapping("/{appointmentId}/status")
+    public AppointmentStatusResponse getAppointmentStatus(
+            @PathVariable Long appointmentId
+    ) {
+        return appointmentService.getAppointmentStatus(appointmentId);
     }
 }

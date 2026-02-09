@@ -5,16 +5,19 @@ import com.council.appointmentservice.dto.BlockSlotRequest;
 import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
 import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
 import com.council.appointmentservice.dto.response.AppointmentResponse;
+import com.council.appointmentservice.dto.response.AppointmentStatusResponse;
 import com.council.appointmentservice.dto.response.CounselorAppointmentResponse;
 import com.council.appointmentservice.model.Appointment;
 import com.council.appointmentservice.model.AppointmentStatus;
 import com.council.appointmentservice.repository.AppointmentRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.council.appointmentservice.dto.BlockSlotRequest.UnavailabilityReason.APPOINTMENT_CONFIRMED;
 import static com.council.appointmentservice.dto.BlockSlotRequest.UnavailabilityReason.APPOINTMENT_HOLD;
 import static com.council.appointmentservice.model.AppointmentStatus.*;
 
@@ -57,7 +60,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
 
         // 2️⃣ Check slot availability via Availability Service
-        boolean available = availabilityClient.isSlotAvailable(
+        boolean available = callAvailabilityCheck(
                 request.getCounselorId(),
                 request.getAppointmentDate(),
                 request.getStartTime()
@@ -77,7 +80,12 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setStatus(PENDING_PAYMENT);
         appointment.setSlotLockedAt(LocalDateTime.now());
 
-        Appointment saved = appointmentRepository.save(appointment);
+        Appointment saved;
+        try {
+            saved = appointmentRepository.save(appointment);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalStateException("Slot already taken", e);
+        }
 
         // 4️⃣ Block slot via Availability Service
         BlockSlotRequest blockRequest = BlockSlotRequest.builder()
@@ -87,7 +95,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .reason(APPOINTMENT_HOLD)
                 .referenceId(saved.getId())
                 .build();
-        availabilityClient.blockSlot(blockRequest);
+        callAvailabilityBlock(blockRequest);
 
         return mapToResponse(saved);
     }
@@ -132,10 +140,21 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new SecurityException("Not allowed to reschedule this appointment");
         }
 
+        if (appointment.getStatus() == CANCELLED
+                || appointment.getStatus() == EXPIRED
+                || appointment.getStatus() == COMPLETED) {
+            throw new IllegalStateException("This appointment cannot be rescheduled");
+        }
+
         // TODO: enforce 12-hour rule later
 
+        if (appointment.getAppointmentDate().equals(request.getNewDate())
+                && appointment.getStartTime().equals(request.getNewStartTime())) {
+            return mapToResponse(appointment);
+        }
+
         // 1. Check new slot availability
-        boolean available = availabilityClient.isSlotAvailable(
+        boolean available = callAvailabilityCheck(
                 appointment.getCounselorId(),
                 request.getNewDate(),
                 request.getNewStartTime()
@@ -144,27 +163,82 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalStateException("New slot is not available");
         }
 
-        // 2. Free old slot
-        availabilityClient.freeSlot(appointment.getId());
+        // Preserve old slot before changes (for rollback)
+        LocalDateTime oldLockedAt = appointment.getSlotLockedAt();
+        AppointmentStatus oldStatus = appointment.getStatus();
+        var oldDate = appointment.getAppointmentDate();
+        var oldStart = appointment.getStartTime();
+        var oldEnd = appointment.getEndTime();
 
-        // 3. Update appointment to new slot
+        // 2. Free old slot
+        callAvailabilityFree(appointment.getId());
+
+        // 3. Block new slot (all-or-nothing)
+        BlockSlotRequest.UnavailabilityReason newReason =
+                oldStatus == CONFIRMED ? APPOINTMENT_CONFIRMED : APPOINTMENT_HOLD;
+
+        BlockSlotRequest blockRequest = BlockSlotRequest.builder()
+                .counselorId(appointment.getCounselorId())
+                .date(request.getNewDate())
+                .startTime(request.getNewStartTime())
+                .reason(newReason)
+                .referenceId(appointment.getId())
+                .build();
+        try {
+            callAvailabilityBlock(blockRequest);
+        } catch (RuntimeException blockError) {
+            // Try to restore old slot
+            try {
+                BlockSlotRequest restoreRequest = BlockSlotRequest.builder()
+                        .counselorId(appointment.getCounselorId())
+                        .date(oldDate)
+                        .startTime(oldStart)
+                        .reason(newReason)
+                        .referenceId(appointment.getId())
+                        .build();
+                callAvailabilityBlock(restoreRequest);
+            } catch (RuntimeException restoreError) {
+                blockError.addSuppressed(restoreError);
+            }
+            throw blockError;
+        }
+
+        // 4. Update appointment to new slot
         appointment.setAppointmentDate(request.getNewDate());
         appointment.setStartTime(request.getNewStartTime());
         appointment.setEndTime(request.getNewStartTime().plusHours(SLOT_DURATION_HOURS));
         appointment.setStatus(AppointmentStatus.RESCHEDULED);
         appointment.setSlotLockedAt(LocalDateTime.now());
 
-        Appointment updated = appointmentRepository.save(appointment);
-
-        // 4. Block new slot
-        BlockSlotRequest blockRequest = BlockSlotRequest.builder()
-                .counselorId(updated.getCounselorId())
-                .date(updated.getAppointmentDate())
-                .startTime(updated.getStartTime())
-                .reason(APPOINTMENT_HOLD) // Or maybe a new RESCHEDULED reason
-                .referenceId(updated.getId())
-                .build();
-        availabilityClient.blockSlot(blockRequest);
+        Appointment updated;
+        try {
+            updated = appointmentRepository.save(appointment);
+        } catch (RuntimeException saveError) {
+            // Compensate: free new slot and restore old slot
+            try {
+                callAvailabilityFree(appointment.getId());
+            } catch (RuntimeException freeError) {
+                saveError.addSuppressed(freeError);
+            }
+            try {
+                BlockSlotRequest restoreRequest = BlockSlotRequest.builder()
+                        .counselorId(appointment.getCounselorId())
+                        .date(oldDate)
+                        .startTime(oldStart)
+                        .reason(newReason)
+                        .referenceId(appointment.getId())
+                        .build();
+                callAvailabilityBlock(restoreRequest);
+            } catch (RuntimeException restoreError) {
+                saveError.addSuppressed(restoreError);
+            }
+            appointment.setAppointmentDate(oldDate);
+            appointment.setStartTime(oldStart);
+            appointment.setEndTime(oldEnd);
+            appointment.setSlotLockedAt(oldLockedAt);
+            appointment.setStatus(oldStatus);
+            throw saveError;
+        }
 
         return mapToResponse(updated);
     }
@@ -195,11 +269,92 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new SecurityException("Not allowed to cancel this appointment");
         }
 
-        appointment.setStatus(AppointmentStatus.CANCELLED);
-        appointmentRepository.save(appointment);
+        if (appointment.getStatus() == COMPLETED) {
+            throw new IllegalStateException("Completed appointments cannot be cancelled");
+        }
 
-        // Free the slot in availability service
-        availabilityClient.freeSlot(appointment.getId());
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED
+                || appointment.getStatus() == AppointmentStatus.EXPIRED) {
+            callAvailabilityFree(appointment.getId());
+            return;
+        }
+
+        if (appointment.getStatus() != AppointmentStatus.CANCELLED) {
+            appointment.setStatus(AppointmentStatus.CANCELLED);
+            appointmentRepository.save(appointment);
+        }
+
+        // Free the slot in availability service (idempotent)
+        callAvailabilityFree(appointment.getId());
+    }
+
+    /**
+     * PAYMENT SUCCESS -> Confirm appointment
+     */
+    @Override
+    @Transactional
+    public AppointmentResponse confirmAppointment(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        if (appointment.getStatus() == CONFIRMED) {
+            callAvailabilityUpdateReason(appointment.getId(), APPOINTMENT_CONFIRMED);
+            return mapToResponse(appointment);
+        }
+
+        if (appointment.getStatus() != PENDING_PAYMENT) {
+            throw new IllegalStateException("Only pending appointments can be confirmed");
+        }
+
+        appointment.setStatus(CONFIRMED);
+        Appointment updated = appointmentRepository.save(appointment);
+
+        callAvailabilityUpdateReason(updated.getId(), APPOINTMENT_CONFIRMED);
+
+        return mapToResponse(updated);
+    }
+
+    @Override
+    public AppointmentStatusResponse getAppointmentStatus(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        return AppointmentStatusResponse.builder()
+                .appointmentId(appointment.getId())
+                .status(appointment.getStatus())
+                .build();
+    }
+
+    private void callAvailabilityBlock(BlockSlotRequest request) {
+        try {
+            availabilityClient.blockSlot(request);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("Availability service unavailable", e);
+        }
+    }
+
+    private void callAvailabilityFree(Long referenceId) {
+        try {
+            availabilityClient.freeSlot(referenceId);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("Availability service unavailable", e);
+        }
+    }
+
+    private void callAvailabilityUpdateReason(Long referenceId, BlockSlotRequest.UnavailabilityReason reason) {
+        try {
+            availabilityClient.updateBlockReason(referenceId, reason);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("Availability service unavailable", e);
+        }
+    }
+
+    private boolean callAvailabilityCheck(Long counselorId, java.time.LocalDate date, java.time.LocalTime startTime) {
+        try {
+            return availabilityClient.isSlotAvailable(counselorId, date, startTime);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("Availability service unavailable", e);
+        }
     }
 
     // =======================

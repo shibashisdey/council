@@ -1,6 +1,7 @@
 package com.council.availabilityservice.controller;
 
 import com.council.availabilityservice.dto.request.AddUnavailabilityRequest;
+import com.council.availabilityservice.dto.request.SetLunchBreakRequest;
 import com.council.availabilityservice.dto.request.SetWorkingHoursRequest;
 import com.council.availabilityservice.dto.response.CounselorAvailabilityResponse;
 import com.council.availabilityservice.service.CounselorScheduleService;
@@ -27,6 +28,15 @@ public class CounselorScheduleController {
             @RequestBody SetWorkingHoursRequest request
     ) {
         counselorScheduleService.setWorkingHours(counselorId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/lunch-break/{counselorId}")
+    public ResponseEntity<Void> setLunchBreak(
+            @PathVariable Long counselorId,
+            @RequestBody SetLunchBreakRequest request
+    ) {
+        counselorScheduleService.setLunchBreak(counselorId, request);
         return ResponseEntity.ok().build();
     }
 

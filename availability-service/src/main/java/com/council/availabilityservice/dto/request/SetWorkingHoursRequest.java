@@ -9,7 +9,6 @@ import java.time.LocalTime;
 @Getter
 @Setter
 public class SetWorkingHoursRequest {
-
     private DayOfWeek dayOfWeek;
     private LocalTime startTime;
     private LocalTime endTime;

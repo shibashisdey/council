@@ -1,5 +1,6 @@
 package com.council.appointmentservice.scheduler;
 
+import com.council.appointmentservice.client.AvailabilityClient;
 import com.council.appointmentservice.model.Appointment;
 import com.council.appointmentservice.model.AppointmentStatus;
 import com.council.appointmentservice.repository.AppointmentRepository;
@@ -13,9 +14,14 @@ import java.util.List;
 public class AppointmentExpiryScheduler {
 
     private final AppointmentRepository appointmentRepository;
+    private final AvailabilityClient availabilityClient;
 
-    public AppointmentExpiryScheduler(AppointmentRepository appointmentRepository) {
+    public AppointmentExpiryScheduler(
+            AppointmentRepository appointmentRepository,
+            AvailabilityClient availabilityClient
+    ) {
         this.appointmentRepository = appointmentRepository;
+        this.availabilityClient = availabilityClient;
     }
 
     /**
@@ -35,6 +41,7 @@ public class AppointmentExpiryScheduler {
 
         for (Appointment appointment : expiredAppointments) {
             appointment.setStatus(AppointmentStatus.EXPIRED);
+            availabilityClient.freeSlot(appointment.getId());
         }
 
         appointmentRepository.saveAll(expiredAppointments);

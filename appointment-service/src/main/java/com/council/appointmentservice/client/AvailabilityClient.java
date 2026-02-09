@@ -12,4 +12,6 @@ public interface AvailabilityClient {
     void blockSlot(BlockSlotRequest request);
 
     void freeSlot(Long referenceId);
+
+    void updateBlockReason(Long referenceId, BlockSlotRequest.UnavailabilityReason newReason);
 }

@@ -1,6 +1,7 @@
 package com.council.appointmentservice.client;
 
 import com.council.appointmentservice.dto.BlockSlotRequest;
+import com.council.appointmentservice.dto.UpdateBlockReasonRequest;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -25,7 +26,7 @@ public class AvailabilityClientImpl implements AvailabilityClient {
 
         this.webClient = webClientBuilder
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl("http://localhost:8083/internal/availability").build();
+                .baseUrl("http://localhost:8085/internal/availability").build();
     }
 
     @Override
@@ -58,6 +59,19 @@ public class AvailabilityClientImpl implements AvailabilityClient {
     public void freeSlot(Long referenceId) {
         webClient.post()
                 .uri("/free/{referenceId}", referenceId)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .block();
+    }
+
+    @Override
+    public void updateBlockReason(Long referenceId, BlockSlotRequest.UnavailabilityReason newReason) {
+        UpdateBlockReasonRequest request = new UpdateBlockReasonRequest();
+        request.setNewReason(newReason);
+
+        webClient.put()
+                .uri("/block/{referenceId}/reason", referenceId)
+                .body(Mono.just(request), UpdateBlockReasonRequest.class)
                 .retrieve()
                 .bodyToMono(Void.class)
                 .block();

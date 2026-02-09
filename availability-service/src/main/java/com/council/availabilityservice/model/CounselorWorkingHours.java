@@ -11,9 +11,7 @@ import java.time.LocalTime;
 @Table(
         name = "counselor_working_hours",
         uniqueConstraints = {
-                @UniqueConstraint(
-                        columnNames = {"counselor_id", "day_of_week"}
-                )
+                @UniqueConstraint(columnNames = {"counselor_id", "day_of_week"})
         }
 )
 @Getter

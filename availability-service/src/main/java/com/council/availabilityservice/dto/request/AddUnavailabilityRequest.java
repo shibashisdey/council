@@ -1,5 +1,6 @@
 package com.council.availabilityservice.dto.request;
 
+import com.council.availabilityservice.model.UnavailabilityReason;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,9 +10,8 @@ import java.time.LocalTime;
 @Getter
 @Setter
 public class AddUnavailabilityRequest {
-
     private LocalDate date;
     private LocalTime startTime;
     private LocalTime endTime;
-    private String reason; // enum name
+    private UnavailabilityReason reason;
 }

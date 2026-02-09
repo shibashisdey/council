@@ -6,7 +6,6 @@ import lombok.Getter;
 @Getter
 @Builder
 public class AvailabilityResponse {
-
     private boolean available;
-    private String reason; // null if available
+    private String reason;
 }
