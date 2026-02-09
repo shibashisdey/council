@@ -4,6 +4,7 @@ import com.council.appointmentservice.client.AvailabilityClient;
 import com.council.appointmentservice.dto.BlockSlotRequest;
 import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
 import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
+import com.council.appointmentservice.dto.response.AppointmentInternalResponse;
 import com.council.appointmentservice.dto.response.AppointmentResponse;
 import com.council.appointmentservice.dto.response.AppointmentStatusResponse;
 import com.council.appointmentservice.dto.response.CounselorAppointmentResponse;
@@ -323,6 +324,41 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .appointmentId(appointment.getId())
                 .status(appointment.getStatus())
                 .build();
+    }
+
+    @Override
+    public AppointmentInternalResponse getAppointmentInternal(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        return AppointmentInternalResponse.builder()
+                .appointmentId(appointment.getId())
+                .clientId(appointment.getClientId())
+                .counselorId(appointment.getCounselorId())
+                .appointmentDate(appointment.getAppointmentDate())
+                .startTime(appointment.getStartTime())
+                .endTime(appointment.getEndTime())
+                .status(appointment.getStatus())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public AppointmentResponse completeAppointment(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        if (appointment.getStatus() == COMPLETED) {
+            return mapToResponse(appointment);
+        }
+
+        if (appointment.getStatus() != CONFIRMED) {
+            throw new IllegalStateException("Only confirmed appointments can be completed");
+        }
+
+        appointment.setStatus(COMPLETED);
+        Appointment updated = appointmentRepository.save(appointment);
+        return mapToResponse(updated);
     }
 
     private void callAvailabilityBlock(BlockSlotRequest request) {

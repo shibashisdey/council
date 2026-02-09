@@ -1,7 +1,9 @@
 package com.council.userauthenticationservice.service;
 
 import com.council.userauthenticationservice.Repository.UserRepository;
+import com.council.userauthenticationservice.exception.InvalidCredentialsException;
 import com.council.userauthenticationservice.exception.UserAlreadyExistsException;
+import com.council.userauthenticationservice.exception.UserNotFoundException;
 import com.council.userauthenticationservice.model.LoginRequest;
 import com.council.userauthenticationservice.model.RegisterRequest;
 import com.council.userauthenticationservice.model.User;
@@ -42,10 +44,14 @@ public class AuthServiceImpl implements AuthService {
     public String login(LoginRequest request) {
 
         var user = repository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!user.isEnabled()) {
+            throw new InvalidCredentialsException("User is disabled");
+        }
 
         if (!encoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new InvalidCredentialsException("Invalid credentials");
         }
 
         return jwtService.generateToken(

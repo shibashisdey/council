@@ -9,6 +9,7 @@ import com.council.counselorservice.model.Specialization;
 import com.council.counselorservice.repository.CounselorRepository;
 import com.council.counselorservice.repository.SpecializationRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -86,6 +87,7 @@ public class CounselorServiceImpl implements CounselorService {
 //        return counselorRepository.findByUserId(userId)
 //                .orElseThrow(() -> new ResourceNotFoundException("Counselor not found"));
 //    }
+    @Transactional(readOnly = true)
     public CounselorResponse getByUserId(Long userId) {
         Counselor counselor = counselorRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Counselor not found"));
@@ -100,6 +102,7 @@ public class CounselorServiceImpl implements CounselorService {
 //                .filter(Counselor::isActive)
 //                .toList();
 //    }
+    @Transactional(readOnly = true)
     public Set<CounselorResponse> getAllActiveCounselors() {
         return counselorRepository.findByActiveTrue()
                 .stream()
@@ -108,6 +111,7 @@ public class CounselorServiceImpl implements CounselorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CounselorResponse getById(Long counselorId) {
         Counselor counselor = counselorRepository.findById(counselorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Counselor not found"));

@@ -2,6 +2,7 @@ package com.council.appointmentservice.controller;
 
 import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
 import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
+import com.council.appointmentservice.dto.response.AppointmentInternalResponse;
 import com.council.appointmentservice.dto.response.AppointmentResponse;
 import com.council.appointmentservice.dto.response.AppointmentStatusResponse;
 import com.council.appointmentservice.dto.response.CounselorAppointmentResponse;
@@ -101,5 +102,25 @@ public class AppointmentController {
             @PathVariable Long appointmentId
     ) {
         return appointmentService.getAppointmentStatus(appointmentId);
+    }
+
+    /**
+     * INTERNAL -> Get appointment details for other services
+     */
+    @GetMapping("/{appointmentId}/internal")
+    public AppointmentInternalResponse getAppointmentInternal(
+            @PathVariable Long appointmentId
+    ) {
+        return appointmentService.getAppointmentInternal(appointmentId);
+    }
+
+    /**
+     * INTERNAL -> Complete appointment after session
+     */
+    @PutMapping("/{appointmentId}/complete")
+    public AppointmentResponse completeAppointment(
+            @PathVariable Long appointmentId
+    ) {
+        return appointmentService.completeAppointment(appointmentId);
     }
 }

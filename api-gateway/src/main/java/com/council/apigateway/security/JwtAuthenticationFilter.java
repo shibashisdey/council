@@ -77,6 +77,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
             }
 
+            if (path.startsWith("/users")) {
+                if (!"CLIENT".equals(role)) {
+                    exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                    return exchange.getResponse().setComplete();
+                }
+            }
+
 
             // Attach trusted headers for downstream services
             exchange = exchange.mutate()

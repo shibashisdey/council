@@ -3,6 +3,7 @@ package com.council.appointmentservice.service;
 import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
 import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
 import com.council.appointmentservice.dto.response.AppointmentResponse;
+import com.council.appointmentservice.dto.response.AppointmentInternalResponse;
 import com.council.appointmentservice.dto.response.AppointmentStatusResponse;
 import com.council.appointmentservice.dto.response.CounselorAppointmentResponse;
 
@@ -55,4 +56,14 @@ public interface AppointmentService {
      * INTERNAL -> Get appointment status
      */
     AppointmentStatusResponse getAppointmentStatus(Long appointmentId);
+
+    /**
+     * INTERNAL -> Get appointment details for other services
+     */
+    AppointmentInternalResponse getAppointmentInternal(Long appointmentId);
+
+    /**
+     * INTERNAL -> Mark appointment completed
+     */
+    AppointmentResponse completeAppointment(Long appointmentId);
 }
