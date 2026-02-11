@@ -36,7 +36,7 @@ public class Appointment {
     private Long clientId;
 
     /**
-     * User ID of THERAPIST (from counselor-service)
+     * Counselor profile ID (from counselor-service)
      */
     @Column(name = "counselor_id", nullable = false)
     private Long counselorId;

@@ -1,5 +1,6 @@
 package com.council.reviewservice.controller;
 
+import com.council.reviewservice.client.CounselorClient;
 import com.council.reviewservice.dto.request.CreateSessionNoteRequest;
 import com.council.reviewservice.dto.request.ShareSessionNoteRequest;
 import com.council.reviewservice.dto.request.UpdatePdfRequest;
@@ -18,40 +19,45 @@ import java.util.List;
 public class SessionNoteController {
 
     private final SessionNoteService sessionNoteService;
+    private final CounselorClient counselorClient;
 
-    public SessionNoteController(SessionNoteService sessionNoteService) {
+    public SessionNoteController(SessionNoteService sessionNoteService, CounselorClient counselorClient) {
         this.sessionNoteService = sessionNoteService;
+        this.counselorClient = counselorClient;
     }
 
     @PostMapping
     public ResponseEntity<SessionNoteCounselorResponse> createSessionNote(
-            @RequestHeader("X-USER-ID") Long counselorId,
+            @RequestHeader("X-USER-ID") Long requesterId,
             @RequestHeader("X-USER-ROLE") String role,
             @RequestBody CreateSessionNoteRequest request
     ) {
         requireTherapist(role);
+        Long counselorId = requireCounselorId(requesterId);
         return ResponseEntity.ok(sessionNoteService.createSessionNote(counselorId, request));
     }
 
     @PutMapping("/{noteId}")
     public ResponseEntity<SessionNoteCounselorResponse> updateSessionNote(
-            @RequestHeader("X-USER-ID") Long counselorId,
+            @RequestHeader("X-USER-ID") Long requesterId,
             @RequestHeader("X-USER-ROLE") String role,
             @PathVariable Long noteId,
             @RequestBody UpdateSessionNoteRequest request
     ) {
         requireTherapist(role);
+        Long counselorId = requireCounselorId(requesterId);
         return ResponseEntity.ok(sessionNoteService.updateSessionNote(counselorId, noteId, request));
     }
 
     @PatchMapping("/{noteId}/share")
     public ResponseEntity<SessionNoteCounselorResponse> shareSessionNote(
-            @RequestHeader("X-USER-ID") Long counselorId,
+            @RequestHeader("X-USER-ID") Long requesterId,
             @RequestHeader("X-USER-ROLE") String role,
             @PathVariable Long noteId,
             @RequestBody ShareSessionNoteRequest request
     ) {
         requireTherapist(role);
+        Long counselorId = requireCounselorId(requesterId);
         return ResponseEntity.ok(sessionNoteService.shareSessionNote(counselorId, noteId, request));
     }
 
@@ -84,7 +90,8 @@ public class SessionNoteController {
             @PathVariable Long counselorId
     ) {
         requireTherapist(role);
-        if (!requesterId.equals(counselorId)) {
+        Long requesterCounselorId = requireCounselorId(requesterId);
+        if (!requesterCounselorId.equals(counselorId)) {
             throw new SecurityException("Not allowed to access these notes");
         }
         return ResponseEntity.ok(sessionNoteService.getNotesForCounselor(counselorId));
@@ -117,5 +124,13 @@ public class SessionNoteController {
         if (!"CLIENT".equals(role)) {
             throw new SecurityException("Client access only");
         }
+    }
+
+    private Long requireCounselorId(Long requesterId) {
+        var counselor = counselorClient.getCounselorByUserId(requesterId);
+        if (counselor == null || counselor.getId() == null) {
+            throw new SecurityException("Counselor profile not found");
+        }
+        return counselor.getId();
     }
 }

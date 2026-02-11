@@ -2,8 +2,11 @@ package com.council.appointmentservice.client;
 
 import com.council.appointmentservice.dto.BlockSlotRequest;
 import com.council.appointmentservice.dto.UpdateBlockReasonRequest;
+import com.council.appointmentservice.security.InternalJwtService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
@@ -18,15 +21,23 @@ public class AvailabilityClientImpl implements AvailabilityClient {
 
     private final WebClient webClient;
 
-    public AvailabilityClientImpl(WebClient.Builder webClientBuilder) {
+    public AvailabilityClientImpl(WebClient.Builder webClientBuilder, InternalJwtService internalJwtService) {
         // In a real app, this URL would come from config and use service discovery
         HttpClient httpClient = HttpClient.create()
                 .responseTimeout(Duration.ofSeconds(5))
                 .followRedirect(true);
 
+        ExchangeFilterFunction authFilter = (request, next) -> next.exchange(
+                org.springframework.web.reactive.function.client.ClientRequest.from(request)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + internalJwtService.generateToken())
+                        .build()
+        );
+
         this.webClient = webClientBuilder
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl("http://localhost:8085/internal/availability").build();
+                .baseUrl("http://localhost:8085/internal/availability")
+                .filter(authFilter)
+                .build();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.council.appointmentservice.service;
 
 import com.council.appointmentservice.client.AvailabilityClient;
+import com.council.appointmentservice.client.CounselorClient;
 import com.council.appointmentservice.dto.BlockSlotRequest;
 import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
 import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
@@ -29,13 +30,16 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final AvailabilityClient availabilityClient;
+    private final CounselorClient counselorClient;
 
     public AppointmentServiceImpl(
             AppointmentRepository appointmentRepository,
-            AvailabilityClient availabilityClient
+            AvailabilityClient availabilityClient,
+            CounselorClient counselorClient
     ) {
         this.appointmentRepository = appointmentRepository;
         this.availabilityClient = availabilityClient;
+        this.counselorClient = counselorClient;
     }
 
     /**
@@ -208,7 +212,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setAppointmentDate(request.getNewDate());
         appointment.setStartTime(request.getNewStartTime());
         appointment.setEndTime(request.getNewStartTime().plusHours(SLOT_DURATION_HOURS));
-        appointment.setStatus(AppointmentStatus.RESCHEDULED);
+        appointment.setStatus(oldStatus);
         appointment.setSlotLockedAt(LocalDateTime.now());
 
         Appointment updated;
@@ -262,9 +266,13 @@ public class AppointmentServiceImpl implements AppointmentService {
                 "CLIENT".equals(requesterRole)
                         && appointment.getClientId().equals(requesterId);
 
-        boolean isCounselor =
-                "THERAPIST".equals(requesterRole)
-                        && appointment.getCounselorId().equals(requesterId);
+        boolean isCounselor = false;
+        if ("THERAPIST".equals(requesterRole)) {
+            var counselor = counselorClient.getCounselorByUserId(requesterId);
+            isCounselor = counselor != null
+                    && counselor.getId() != null
+                    && counselor.getId().equals(appointment.getCounselorId());
+        }
 
         if (!isClient && !isCounselor) {
             throw new SecurityException("Not allowed to cancel this appointment");

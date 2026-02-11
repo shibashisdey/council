@@ -1,5 +1,6 @@
 package com.council.appointmentservice.controller;
 
+import com.council.appointmentservice.client.CounselorClient;
 import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
 import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
 import com.council.appointmentservice.dto.response.AppointmentInternalResponse;
@@ -18,9 +19,11 @@ import java.util.List;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
+    private final CounselorClient counselorClient;
 
-    public AppointmentController(AppointmentService appointmentService) {
+    public AppointmentController(AppointmentService appointmentService, CounselorClient counselorClient) {
         this.appointmentService = appointmentService;
+        this.counselorClient = counselorClient;
     }
 
     /**
@@ -52,8 +55,15 @@ public class AppointmentController {
      */
     @GetMapping("/counselor/{counselorId}")
     public List<CounselorAppointmentResponse> getCounselorAppointments(
+            @RequestHeader("X-USER-ID") Long requesterId,
+            @RequestHeader("X-USER-ROLE") String role,
             @PathVariable Long counselorId
     ) {
+        requireTherapist(role);
+        var counselor = counselorClient.getCounselorByUserId(requesterId);
+        if (counselor == null || counselor.getId() == null || !counselor.getId().equals(counselorId)) {
+            throw new SecurityException("Not allowed to access these appointments");
+        }
         return appointmentService.getAppointmentsForCounselor(counselorId);
     }
 
@@ -122,5 +132,11 @@ public class AppointmentController {
             @PathVariable Long appointmentId
     ) {
         return appointmentService.completeAppointment(appointmentId);
+    }
+
+    private void requireTherapist(String role) {
+        if (!"THERAPIST".equals(role)) {
+            throw new SecurityException("Therapist access only");
+        }
     }
 }

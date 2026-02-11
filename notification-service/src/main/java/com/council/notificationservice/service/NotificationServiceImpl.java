@@ -57,7 +57,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         AppointmentInternalResponse appointment = appointmentClient.getAppointment(note.getAppointmentId());
         UserPublicResponse user = userClient.getUserPublic(note.getUserId());
-        CounselorResponse counselor = counselorClient.getCounselorByUserId(note.getCounselorId());
+        CounselorResponse counselor = counselorClient.getCounselorById(note.getCounselorId());
 
         String content = buildPdfPlaceholderContent(note, appointment, user, counselor);
         String publicUrl;

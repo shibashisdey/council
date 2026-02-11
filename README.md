@@ -5,7 +5,7 @@ StackFul Minds is a Spring Boot microservices system for therapy sessions. It in
 
 **Services And Ports**
 1. `eureka-server` — `8761` (service registry)
-2. `api-gateway` — `8080`
+2. `api-gateway` — `8091`
 3. `user-authentication-service` — `8081`
 4. `counselor-service` — `8090`
 5. `appointment-service` — `8083`
@@ -36,6 +36,11 @@ StackFul Minds is a Spring Boot microservices system for therapy sessions. It in
    - `/auth/**` → auth service
    - `/counselors/**` → counselor service
    - `/users/**` → user service
+   - `/appointments/**` → appointment service
+   - `/reviews/**` → review service
+   - `/session-notes/**` → review service
+   - `/payments/**` → payment service
+   - `/schedule/**` → availability service
 4. Role checks currently enforced at gateway:
    - `/counselors/**` allow `THERAPIST` for write, `CLIENT|THERAPIST` for read
    - `/users/**` allow `CLIENT` only
@@ -48,7 +53,7 @@ StackFul Minds is a Spring Boot microservices system for therapy sessions. It in
 1. `POST /users` — create user profile (client)
 2. `GET /users/me` — fetch own profile
 3. `PATCH /users/me` — update own profile
-4. `GET /users/{id}/public` — internal use only with `X-INTERNAL-CALL: true`
+4. `GET /users/{id}/public` — internal use only
 
 **Counselor Service**
 1. `POST /counselors` — create counselor profile (therapist)
@@ -84,6 +89,7 @@ Core behavior:
 4. Expires unpaid holds after 10 minutes and frees slots.
 5. Reschedule is all-or-nothing with compensation.
 6. Confirm updates availability block reason to `APPOINTMENT_CONFIRMED`.
+7. `counselorId` refers to counselor profile ID (not auth user id).
 
 Endpoints:
 1. `POST /appointments` — create appointment
@@ -154,12 +160,13 @@ Set in `notification-service/src/main/resources/application.properties`:
 **Postman Quick Start**
 1. Register therapist: `POST http://localhost:8081/auth/register`
 2. Login therapist: `POST http://localhost:8081/auth/login`
-3. Create counselor profile via gateway: `POST http://localhost:8080/counselors`
+3. Create counselor profile via gateway: `POST http://localhost:8091/counselors`
 4. Register client: `POST http://localhost:8081/auth/register`
 5. Login client: `POST http://localhost:8081/auth/login`
-6. Create user profile via gateway: `POST http://localhost:8080/users`
+6. Create user profile via gateway: `POST http://localhost:8091/users`
 
 **Notes**
 1. Most internal calls currently use fixed `localhost` URLs, not Eureka load balancing.
 2. API Gateway must be running for client-facing routes.
+3. Internal endpoints (ex: `/internal/**`, `/payments/*/confirm`) require internal JWT auth.
 

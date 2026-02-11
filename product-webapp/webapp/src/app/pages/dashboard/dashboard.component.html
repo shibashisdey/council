@@ -1,0 +1,245 @@
+<div class="page">
+  <div class="header">
+    <div>
+      <h1>StackFul Minds</h1>
+      <p class="subtitle">End-to-end console for clients and therapists</p>
+    </div>
+    <div class="user">
+      <div *ngIf="currentUser">
+        <div class="pill">{{ currentUser.role }}</div>
+        <div class="user-email">{{ currentUser.email }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status" *ngIf="statusMessage">{{ statusMessage }}</div>
+
+  <section class="card">
+    <h2>Profile</h2>
+    <div class="grid">
+      <div>
+        <h3>User Profile</h3>
+        <div class="form">
+          <input placeholder="Full name" [(ngModel)]="userProfileForm.fullName" />
+          <input placeholder="Phone number" [(ngModel)]="userProfileForm.phoneNumber" />
+          <input placeholder="Gender" [(ngModel)]="userProfileForm.gender" />
+          <input type="date" placeholder="Date of birth" [(ngModel)]="userProfileForm.dateOfBirth" />
+          <input placeholder="City" [(ngModel)]="userProfileForm.city" />
+          <div class="actions">
+            <button (click)="createUserProfile()">Create</button>
+            <button (click)="updateUserProfile()">Update</button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="currentUser?.role === 'THERAPIST'">
+        <h3>Counselor Profile</h3>
+        <div class="form">
+          <input placeholder="Full name" [(ngModel)]="counselorProfileForm.fullName" />
+          <input placeholder="Qualification" [(ngModel)]="counselorProfileForm.qualification" />
+          <input type="number" placeholder="Experience years" [(ngModel)]="counselorProfileForm.experienceYears" />
+          <input placeholder="Bio" [(ngModel)]="counselorProfileForm.bio" />
+          <input type="number" placeholder="Price per session" [(ngModel)]="counselorProfileForm.pricePerSession" />
+          <input placeholder="Specializations (comma separated)" [(ngModel)]="counselorProfileForm.specializations" />
+          <div class="actions">
+            <button (click)="createCounselorProfile()">Create</button>
+            <button (click)="updateCounselorProfile()">Update</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Counselors</h2>
+    <div class="grid">
+      <div>
+        <button (click)="loadCounselors()">Refresh list</button>
+        <div class="list">
+          <div class="list-item" *ngFor="let counselor of counselors">
+            <div>
+              <strong>{{ counselor.fullName }}</strong>
+              <div class="muted">{{ counselor.qualification }} · {{ counselor.experienceYears }} yrs</div>
+              <div class="muted">₹{{ counselor.pricePerSession }}</div>
+            </div>
+            <button (click)="selectCounselor(counselor.id)">Select</button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="selectedCounselor">
+        <h3>Selected Counselor</h3>
+        <div class="muted">ID: {{ selectedCounselor.id }}</div>
+        <div class="form">
+          <input type="date" [(ngModel)]="availabilityDate" />
+          <button (click)="loadAvailability()">Check blocks</button>
+          <div class="blocks" *ngIf="availabilityBlocks.length">
+            <div class="block" *ngFor="let block of availabilityBlocks">
+              {{ block.startTime }} - {{ block.endTime }} · {{ block.reason }}
+            </div>
+          </div>
+        </div>
+
+        <h3>Book Appointment</h3>
+        <div class="form">
+          <input type="date" [(ngModel)]="bookingForm.appointmentDate" />
+          <input type="time" [(ngModel)]="bookingForm.startTime" />
+          <button (click)="bookAppointment()">Book</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Appointments</h2>
+    <button (click)="loadAppointments()">Refresh</button>
+    <div class="list" *ngIf="currentUser?.role === 'CLIENT'">
+      <div class="list-item" *ngFor="let appt of appointments">
+        <div>
+          <strong>#{{ appt.appointmentId }}</strong>
+          <div class="muted">{{ appt.appointmentDate }} {{ appt.startTime }} - {{ appt.endTime }}</div>
+          <div class="muted">Counselor: {{ appt.counselorId }} · {{ appt.status }}</div>
+        </div>
+        <div class="actions">
+          <button (click)="cancelAppointment(appt.appointmentId)">Cancel</button>
+          <button (click)="simulatePaymentSuccess(appt.appointmentId)">Pay (dev)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="list" *ngIf="currentUser?.role === 'THERAPIST'">
+      <div class="list-item" *ngFor="let appt of counselorAppointments">
+        <div>
+          <strong>#{{ appt.appointmentId }}</strong>
+          <div class="muted">{{ appt.appointmentDate }} {{ appt.startTime }} - {{ appt.endTime }}</div>
+          <div class="muted">Client: {{ appt.clientId }} · {{ appt.status }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <h3>Reschedule</h3>
+        <div class="form">
+          <input type="number" placeholder="Appointment ID" [(ngModel)]="rescheduleForm.appointmentId" />
+          <input type="date" [(ngModel)]="rescheduleForm.newDate" />
+          <input type="time" [(ngModel)]="rescheduleForm.newStartTime" />
+          <button (click)="rescheduleAppointment()">Reschedule</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Create Payment</h3>
+        <div class="form">
+          <input type="number" placeholder="Appointment ID" [(ngModel)]="paymentForm.appointmentId" />
+          <input type="number" placeholder="Amount" [(ngModel)]="paymentForm.amount" />
+          <button (click)="createPayment()">Create Payment</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Reviews</h2>
+    <button (click)="loadReviews()">Refresh</button>
+    <div class="list">
+      <div class="list-item" *ngFor="let review of reviews">
+        <div>
+          <strong>#{{ review.id }}</strong>
+          <div class="muted">Appointment: {{ review.appointmentId }} · Rating: {{ review.rating }}</div>
+          <div class="muted">{{ review.comment }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentUser?.role === 'CLIENT'">
+      <h3>Leave Review</h3>
+      <div class="form">
+        <input type="number" placeholder="Appointment ID" [(ngModel)]="reviewForm.appointmentId" />
+        <input type="number" placeholder="Rating (1-5)" [(ngModel)]="reviewForm.rating" />
+        <input placeholder="Comment" [(ngModel)]="reviewForm.comment" />
+        <button (click)="createReview()">Submit</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Session Notes</h2>
+    <button (click)="loadSessionNotes()">Refresh</button>
+    <div class="list">
+      <div class="list-item" *ngFor="let note of sessionNotes">
+        <div>
+          <strong>#{{ note.id }}</strong>
+          <div class="muted">Appointment: {{ note.appointmentId }} · {{ note.sessionDate }}</div>
+          <div class="muted">{{ note.summary }}</div>
+          <div class="muted" *ngIf="note.pdfUrl">PDF: {{ note.pdfUrl }}</div>
+        </div>
+        <div class="actions" *ngIf="currentUser?.role === 'THERAPIST'">
+          <button (click)="shareSessionNote(note.id, true)">Share</button>
+          <button (click)="shareSessionNote(note.id, false)">Unshare</button>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="currentUser?.role === 'THERAPIST'">
+      <h3>Create Session Note</h3>
+      <div class="form">
+        <input type="number" placeholder="Appointment ID" [(ngModel)]="noteForm.appointmentId" />
+        <input type="date" placeholder="Session date" [(ngModel)]="noteForm.sessionDate" />
+        <input placeholder="Summary" [(ngModel)]="noteForm.summary" />
+        <input placeholder="Observations" [(ngModel)]="noteForm.observations" />
+        <input placeholder="Recommendations" [(ngModel)]="noteForm.recommendations" />
+        <input placeholder="Private notes" [(ngModel)]="noteForm.privateNotes" />
+        <button (click)="createSessionNote()">Create Note</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" *ngIf="currentUser?.role === 'THERAPIST'">
+    <h2>Schedule Management</h2>
+    <div class="grid">
+      <div>
+        <h3>Working Hours</h3>
+        <div class="form">
+          <select [(ngModel)]="workingHoursForm.dayOfWeek">
+            <option>MONDAY</option>
+            <option>TUESDAY</option>
+            <option>WEDNESDAY</option>
+            <option>THURSDAY</option>
+            <option>FRIDAY</option>
+            <option>SATURDAY</option>
+            <option>SUNDAY</option>
+          </select>
+          <input type="time" [(ngModel)]="workingHoursForm.startTime" />
+          <input type="time" [(ngModel)]="workingHoursForm.endTime" />
+          <button (click)="setWorkingHours()">Save</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Lunch Break</h3>
+        <div class="form">
+          <input type="time" [(ngModel)]="lunchBreakForm.startTime" />
+          <input type="time" [(ngModel)]="lunchBreakForm.endTime" />
+          <button (click)="setLunchBreak()">Save</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Unavailability</h3>
+        <div class="form">
+          <input type="date" [(ngModel)]="unavailabilityForm.date" />
+          <input type="time" [(ngModel)]="unavailabilityForm.startTime" />
+          <input type="time" [(ngModel)]="unavailabilityForm.endTime" />
+          <select [(ngModel)]="unavailabilityForm.reason">
+            <option>COUNSELOR_LEAVE</option>
+            <option>PUBLIC_HOLIDAY</option>
+            <option>APPOINTMENT_HOLD</option>
+            <option>APPOINTMENT_CONFIRMED</option>
+          </select>
+          <button (click)="addUnavailability()">Add</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

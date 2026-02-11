@@ -9,6 +9,13 @@
       <label for="password">Password:</label>
       <input type="password" id="password" [(ngModel)]="user.password" name="password" required>
     </div>
+    <div>
+      <label for="role">Role:</label>
+      <select id="role" [(ngModel)]="user.role" name="role">
+        <option value="CLIENT">CLIENT</option>
+        <option value="THERAPIST">THERAPIST</option>
+      </select>
+    </div>
     <button type="submit">Register</button>
   </form>
 </div>

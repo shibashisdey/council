@@ -1,6 +1,10 @@
-<h1>Mental Health Counselor Booking</h1>
-<nav>
-  <a routerLink="/auth/login">Login</a>
-  <a routerLink="/auth/register">Register</a>
-</nav>
+<header class="app-header">
+  <div class="logo">StackFul Minds</div>
+  <nav class="nav">
+    <a routerLink="/dashboard" *ngIf="authState.currentUser">Dashboard</a>
+    <a routerLink="/auth/login" *ngIf="!authState.currentUser">Login</a>
+    <a routerLink="/auth/register" *ngIf="!authState.currentUser">Register</a>
+    <button class="link-btn" (click)="logout()" *ngIf="authState.currentUser">Logout</button>
+  </nav>
+</header>
 <router-outlet></router-outlet>

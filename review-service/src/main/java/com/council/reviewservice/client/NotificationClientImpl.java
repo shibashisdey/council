@@ -1,7 +1,10 @@
 package com.council.reviewservice.client;
 
+import com.council.reviewservice.security.InternalJwtService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Component
@@ -11,9 +14,17 @@ public class NotificationClientImpl implements NotificationClient {
 
     public NotificationClientImpl(
             WebClient.Builder builder,
+            InternalJwtService internalJwtService,
             @Value("${review.notification.base-url}") String notificationBaseUrl
     ) {
-        this.webClient = builder.baseUrl(notificationBaseUrl).build();
+        ExchangeFilterFunction authFilter = (request, next) -> next.exchange(
+                org.springframework.web.reactive.function.client.ClientRequest.from(request)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + internalJwtService.generateToken())
+                        .build()
+        );
+        this.webClient = builder.baseUrl(notificationBaseUrl)
+                .filter(authFilter)
+                .build();
     }
 
     @Override

@@ -53,7 +53,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             String email = claims.getSubject();
             String role = claims.get("role", String.class);
 
-            Long userId = claims.get("userId", Integer.class).longValue();
+            Number userIdClaim = claims.get("userId", Number.class);
+            Long userId = userIdClaim != null ? userIdClaim.longValue() : null;
+            if (userId == null) {
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            }
 
             // 🔐 ROLE-BASED AUTHORIZATION (ADD HERE)
             if (path.startsWith("/counselors")) {

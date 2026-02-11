@@ -52,4 +52,13 @@ public class PaymentController {
         paymentService.failPayment(appointmentId);
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * DEV ONLY → Simulate payment success from client UI
+     */
+    @PostMapping("/{appointmentId}/simulate-success")
+    public ResponseEntity<Void> simulateSuccess(@PathVariable Long appointmentId) {
+        paymentService.confirmPayment(appointmentId, "DEV");
+        return ResponseEntity.ok().build();
+    }
 }

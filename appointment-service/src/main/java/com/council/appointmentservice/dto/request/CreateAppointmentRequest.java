@@ -11,7 +11,7 @@ import java.time.LocalTime;
 public class CreateAppointmentRequest {
 
     /**
-     * Counselor ID (from counselor-service)
+     * Counselor profile ID (from counselor-service)
      */
     private Long counselorId;
 

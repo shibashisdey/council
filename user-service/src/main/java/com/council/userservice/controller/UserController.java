@@ -7,7 +7,6 @@ import com.council.userservice.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 
 @RestController
@@ -61,16 +60,8 @@ public class UserController {
      */
     @GetMapping("/{id}/public")
     public ResponseEntity<UserResponse> getPublicUserProfile(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-INTERNAL-CALL", required = false) String internal
+            @PathVariable Long id
     ) {
-        if (!"true".equals(internal)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Internal access only"
-            );
-        }
-
         return ResponseEntity.ok(userService.getPublicUserById(id));
     }
 }

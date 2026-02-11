@@ -265,7 +265,7 @@ erDiagram
 
 **Appointments**
 1. `appointments`
-   - `id`, `clientId`, `counselorId`, `appointmentDate`, `startTime`, `endTime`
+   - `id`, `clientId`, `counselorId` (counselor profile id), `appointmentDate`, `startTime`, `endTime`
    - `status`, `paymentId`, `slotLockedAt`
 
 **Payments**
@@ -379,3 +379,7 @@ Notification service requires R2 values:
 3. `r2.secret-key`
 4. `r2.bucket`
 5. `r2.public-base-url`
+
+Internal service auth (shared across services):
+1. `internal.jwt.secret`
+2. `internal.jwt.expiration.ms`

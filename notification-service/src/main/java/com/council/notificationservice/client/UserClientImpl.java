@@ -1,8 +1,11 @@
 package com.council.notificationservice.client;
 
 import com.council.notificationservice.dto.UserPublicResponse;
+import com.council.notificationservice.security.InternalJwtService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Component
@@ -12,16 +15,23 @@ public class UserClientImpl implements UserClient {
 
     public UserClientImpl(
             WebClient.Builder builder,
+            InternalJwtService internalJwtService,
             @Value("${notification.user.base-url}") String userBaseUrl
     ) {
-        this.webClient = builder.baseUrl(userBaseUrl).build();
+        ExchangeFilterFunction authFilter = (request, next) -> next.exchange(
+                org.springframework.web.reactive.function.client.ClientRequest.from(request)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + internalJwtService.generateToken())
+                        .build()
+        );
+        this.webClient = builder.baseUrl(userBaseUrl)
+                .filter(authFilter)
+                .build();
     }
 
     @Override
     public UserPublicResponse getUserPublic(Long userId) {
         return webClient.get()
                 .uri("/users/{id}/public", userId)
-                .header("X-INTERNAL-CALL", "true")
                 .retrieve()
                 .onStatus(status -> status.value() == 404,
                         response -> reactor.core.publisher.Mono.error(

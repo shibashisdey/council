@@ -1,5 +1,6 @@
 package com.council.reviewservice.controller;
 
+import com.council.reviewservice.client.CounselorClient;
 import com.council.reviewservice.dto.request.CreateReviewRequest;
 import com.council.reviewservice.dto.response.ReviewResponse;
 import com.council.reviewservice.service.ReviewService;
@@ -13,9 +14,11 @@ import java.util.List;
 public class ReviewController {
 
     private final ReviewService reviewService;
+    private final CounselorClient counselorClient;
 
-    public ReviewController(ReviewService reviewService) {
+    public ReviewController(ReviewService reviewService, CounselorClient counselorClient) {
         this.reviewService = reviewService;
+        this.counselorClient = counselorClient;
     }
 
     @PostMapping
@@ -35,7 +38,8 @@ public class ReviewController {
             @PathVariable Long counselorId
     ) {
         requireTherapist(role);
-        if (!requesterId.equals(counselorId)) {
+        var counselor = counselorClient.getCounselorByUserId(requesterId);
+        if (counselor == null || counselor.getId() == null || !counselor.getId().equals(counselorId)) {
             throw new SecurityException("Not allowed to access these reviews");
         }
         return ResponseEntity.ok(reviewService.getReviewsForCounselor(counselorId));
