@@ -1,0 +1,27 @@
+.setup {
+  padding: 32px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.card {
+  border: 1px solid #e1e1e1;
+  border-radius: 10px;
+  padding: 20px;
+  background: #fff;
+  margin-bottom: 16px;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.muted {
+  color: #666;
+}
+
+.status {
+  margin: 12px 0;
+  color: #b00020;
+}

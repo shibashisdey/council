@@ -1,6 +1,7 @@
 <header class="app-header">
   <div class="logo">StackFul Minds</div>
   <nav class="nav">
+    <a routerLink="/">Home</a>
     <a routerLink="/dashboard" *ngIf="authState.currentUser">Dashboard</a>
     <a routerLink="/auth/login" *ngIf="!authState.currentUser">Login</a>
     <a routerLink="/auth/register" *ngIf="!authState.currentUser">Register</a>

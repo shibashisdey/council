@@ -1,0 +1,33 @@
+<div class="setup">
+  <h2>Set Your Schedule</h2>
+  <p class="muted">Add your working hours and lunch break to continue.</p>
+
+  <div class="status" *ngIf="statusMessage">{{ statusMessage }}</div>
+
+  <section class="card">
+    <h3>Working Hours</h3>
+    <div class="form">
+      <select [(ngModel)]="workingHoursForm.dayOfWeek">
+        <option>MONDAY</option>
+        <option>TUESDAY</option>
+        <option>WEDNESDAY</option>
+        <option>THURSDAY</option>
+        <option>FRIDAY</option>
+        <option>SATURDAY</option>
+        <option>SUNDAY</option>
+      </select>
+      <input type="time" [(ngModel)]="workingHoursForm.startTime" />
+      <input type="time" [(ngModel)]="workingHoursForm.endTime" />
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Lunch Break</h3>
+    <div class="form">
+      <input type="time" [(ngModel)]="lunchBreakForm.startTime" />
+      <input type="time" [(ngModel)]="lunchBreakForm.endTime" />
+    </div>
+  </section>
+
+  <button (click)="saveSchedule()" [disabled]="loading">Save Schedule</button>
+</div>

@@ -1,0 +1,27 @@
+<div class="home">
+  <section class="hero">
+    <div>
+      <h1>StackFul Minds</h1>
+      <p class="subtitle">Find the right counselor and manage your sessions with ease.</p>
+      <div class="actions">
+        <a class="btn" routerLink="/auth/login">Login</a>
+        <a class="btn outline" routerLink="/auth/register">Register</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="top-counselors">
+    <h2>Top Counselors</h2>
+    <div *ngIf="loading" class="muted">Loading counselors...</div>
+    <div *ngIf="errorMessage" class="muted">{{ errorMessage }}</div>
+
+    <div class="list" *ngIf="!loading && !errorMessage">
+      <div class="card" *ngFor="let counselor of topCounselors">
+        <div class="name">{{ counselor.fullName }}</div>
+        <div class="muted">{{ counselor.qualification }} - {{ counselor.experienceYears }} yrs</div>
+        <div class="muted">Rs {{ counselor.pricePerSession }} per session</div>
+      </div>
+      <div class="muted" *ngIf="topCounselors.length === 0">No counselors available yet.</div>
+    </div>
+  </section>
+</div>

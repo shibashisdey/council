@@ -8,11 +8,17 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AuthInterceptor } from './auth/auth.interceptor';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { HomeComponent } from './pages/home/home.component';
+import { ProfileSetupComponent } from './pages/setup/profile-setup.component';
+import { ScheduleSetupComponent } from './pages/setup/schedule-setup.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    DashboardComponent
+    DashboardComponent,
+    HomeComponent,
+    ProfileSetupComponent,
+    ScheduleSetupComponent
   ],
   imports: [
     BrowserModule,

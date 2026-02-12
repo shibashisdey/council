@@ -15,42 +15,6 @@
   <div class="status" *ngIf="statusMessage">{{ statusMessage }}</div>
 
   <section class="card">
-    <h2>Profile</h2>
-    <div class="grid">
-      <div>
-        <h3>User Profile</h3>
-        <div class="form">
-          <input placeholder="Full name" [(ngModel)]="userProfileForm.fullName" />
-          <input placeholder="Phone number" [(ngModel)]="userProfileForm.phoneNumber" />
-          <input placeholder="Gender" [(ngModel)]="userProfileForm.gender" />
-          <input type="date" placeholder="Date of birth" [(ngModel)]="userProfileForm.dateOfBirth" />
-          <input placeholder="City" [(ngModel)]="userProfileForm.city" />
-          <div class="actions">
-            <button (click)="createUserProfile()">Create</button>
-            <button (click)="updateUserProfile()">Update</button>
-          </div>
-        </div>
-      </div>
-
-      <div *ngIf="currentUser?.role === 'THERAPIST'">
-        <h3>Counselor Profile</h3>
-        <div class="form">
-          <input placeholder="Full name" [(ngModel)]="counselorProfileForm.fullName" />
-          <input placeholder="Qualification" [(ngModel)]="counselorProfileForm.qualification" />
-          <input type="number" placeholder="Experience years" [(ngModel)]="counselorProfileForm.experienceYears" />
-          <input placeholder="Bio" [(ngModel)]="counselorProfileForm.bio" />
-          <input type="number" placeholder="Price per session" [(ngModel)]="counselorProfileForm.pricePerSession" />
-          <input placeholder="Specializations (comma separated)" [(ngModel)]="counselorProfileForm.specializations" />
-          <div class="actions">
-            <button (click)="createCounselorProfile()">Create</button>
-            <button (click)="updateCounselorProfile()">Update</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="card">
     <h2>Counselors</h2>
     <div class="grid">
       <div>
@@ -59,8 +23,8 @@
           <div class="list-item" *ngFor="let counselor of counselors">
             <div>
               <strong>{{ counselor.fullName }}</strong>
-              <div class="muted">{{ counselor.qualification }} · {{ counselor.experienceYears }} yrs</div>
-              <div class="muted">₹{{ counselor.pricePerSession }}</div>
+              <div class="muted">{{ counselor.qualification }} - {{ counselor.experienceYears }} yrs</div>
+              <div class="muted">Rs {{ counselor.pricePerSession }}</div>
             </div>
             <button (click)="selectCounselor(counselor.id)">Select</button>
           </div>
@@ -75,7 +39,7 @@
           <button (click)="loadAvailability()">Check blocks</button>
           <div class="blocks" *ngIf="availabilityBlocks.length">
             <div class="block" *ngFor="let block of availabilityBlocks">
-              {{ block.startTime }} - {{ block.endTime }} · {{ block.reason }}
+              {{ block.startTime }} - {{ block.endTime }} - {{ block.reason }}
             </div>
           </div>
         </div>
@@ -98,7 +62,7 @@
         <div>
           <strong>#{{ appt.appointmentId }}</strong>
           <div class="muted">{{ appt.appointmentDate }} {{ appt.startTime }} - {{ appt.endTime }}</div>
-          <div class="muted">Counselor: {{ appt.counselorId }} · {{ appt.status }}</div>
+          <div class="muted">Counselor: {{ appt.counselorId }} - {{ appt.status }}</div>
         </div>
         <div class="actions">
           <button (click)="cancelAppointment(appt.appointmentId)">Cancel</button>
@@ -112,7 +76,7 @@
         <div>
           <strong>#{{ appt.appointmentId }}</strong>
           <div class="muted">{{ appt.appointmentDate }} {{ appt.startTime }} - {{ appt.endTime }}</div>
-          <div class="muted">Client: {{ appt.clientId }} · {{ appt.status }}</div>
+          <div class="muted">Client: {{ appt.clientId }} - {{ appt.status }}</div>
         </div>
       </div>
     </div>
@@ -146,7 +110,7 @@
       <div class="list-item" *ngFor="let review of reviews">
         <div>
           <strong>#{{ review.id }}</strong>
-          <div class="muted">Appointment: {{ review.appointmentId }} · Rating: {{ review.rating }}</div>
+          <div class="muted">Appointment: {{ review.appointmentId }} - Rating: {{ review.rating }}</div>
           <div class="muted">{{ review.comment }}</div>
         </div>
       </div>
@@ -170,7 +134,7 @@
       <div class="list-item" *ngFor="let note of sessionNotes">
         <div>
           <strong>#{{ note.id }}</strong>
-          <div class="muted">Appointment: {{ note.appointmentId }} · {{ note.sessionDate }}</div>
+          <div class="muted">Appointment: {{ note.appointmentId }} - {{ note.sessionDate }}</div>
           <div class="muted">{{ note.summary }}</div>
           <div class="muted" *ngIf="note.pdfUrl">PDF: {{ note.pdfUrl }}</div>
         </div>

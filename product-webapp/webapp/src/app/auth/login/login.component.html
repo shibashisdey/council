@@ -2,8 +2,8 @@
   <h2>Login</h2>
   <form (ngSubmit)="login()">
     <div>
-      <label for="email">Email:</label>
-      <input type="email" id="email" [(ngModel)]="credentials.email" name="email" required>
+      <label for="identifier">Email or phone:</label>
+      <input type="text" id="identifier" [(ngModel)]="credentials.identifier" name="identifier" required>
     </div>
     <div>
       <label for="password">Password:</label>

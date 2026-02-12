@@ -10,7 +10,7 @@ import { AuthService } from '../auth.service';
 export class LoginComponent implements OnInit {
 
   credentials = {
-    email: '',
+    identifier: '',
     password: ''
   };
 
@@ -20,8 +20,11 @@ export class LoginComponent implements OnInit {
   }
 
   login(): void {
-    this.authService.login(this.credentials).subscribe(() => {
-      this.router.navigate(['/dashboard']);
+    this.authService.login({
+      email: this.credentials.identifier,
+      password: this.credentials.password
+    }).subscribe(() => {
+      this.router.navigate(['/setup/profile']);
     });
   }
 }

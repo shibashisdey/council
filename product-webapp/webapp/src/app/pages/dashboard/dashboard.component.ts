@@ -32,23 +32,6 @@ export class DashboardComponent implements OnInit {
 
   statusMessage = '';
 
-  userProfileForm = {
-    fullName: '',
-    phoneNumber: '',
-    gender: '',
-    dateOfBirth: '',
-    city: ''
-  };
-
-  counselorProfileForm = {
-    fullName: '',
-    qualification: '',
-    experienceYears: 0,
-    bio: '',
-    pricePerSession: 0,
-    specializations: ''
-  };
-
   bookingForm = {
     counselorId: 0,
     appointmentDate: '',
@@ -112,112 +95,25 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.currentUser = this.authState.currentUser;
-    this.refreshProfiles();
-    this.loadCounselors();
-    this.loadAppointments();
-    this.loadReviews();
-    this.loadSessionNotes();
+    this.loadUserProfile();
+    if (this.currentUser?.role === 'CLIENT') {
+      this.loadCounselors();
+      this.loadAppointments();
+      this.loadReviews();
+      this.loadSessionNotes();
+      return;
+    }
+    this.loadTherapistContext();
   }
 
-  refreshProfiles(): void {
+  private loadUserProfile(): void {
     this.userService.getMe().subscribe({
       next: profile => {
         this.userProfile = profile;
-        this.userProfileForm = {
-          fullName: profile.fullName || '',
-          phoneNumber: profile.phoneNumber || '',
-          gender: profile.gender || '',
-          dateOfBirth: '',
-          city: profile.city || ''
-        };
       },
       error: () => {
         this.userProfile = null;
       }
-    });
-
-    if (this.currentUser?.role === 'THERAPIST') {
-      this.counselorService.getMe().subscribe({
-        next: profile => {
-          this.counselorProfile = profile;
-          this.counselorProfileForm = {
-            fullName: profile.fullName || '',
-            qualification: profile.qualification || '',
-            experienceYears: profile.experienceYears || 0,
-            bio: profile.bio || '',
-            pricePerSession: profile.pricePerSession || 0,
-            specializations: profile.specializations?.join(', ') || ''
-          };
-        },
-        error: () => {
-          this.counselorProfile = null;
-        }
-      });
-    }
-  }
-
-  createUserProfile(): void {
-    const payload = {
-      ...this.userProfileForm,
-      dateOfBirth: this.userProfileForm.dateOfBirth || null
-    };
-    this.userService.createProfile(payload).subscribe({
-      next: profile => {
-        this.userProfile = profile;
-        this.statusMessage = 'User profile created.';
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  updateUserProfile(): void {
-    const payload = {
-      ...this.userProfileForm,
-      dateOfBirth: this.userProfileForm.dateOfBirth || null
-    };
-    this.userService.updateMe(payload).subscribe({
-      next: profile => {
-        this.userProfile = profile;
-        this.statusMessage = 'User profile updated.';
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  createCounselorProfile(): void {
-    const payload = {
-      ...this.counselorProfileForm,
-      specializations: this.counselorProfileForm.specializations
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean)
-    };
-    this.counselorService.createProfile(payload).subscribe({
-      next: profile => {
-        this.counselorProfile = profile;
-        this.statusMessage = 'Counselor profile created.';
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  updateCounselorProfile(): void {
-    if (!this.counselorProfile) {
-      return;
-    }
-    const payload = {
-      ...this.counselorProfileForm,
-      specializations: this.counselorProfileForm.specializations
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean)
-    };
-    this.counselorService.updateProfile(this.counselorProfile.id, payload).subscribe({
-      next: profile => {
-        this.counselorProfile = profile;
-        this.statusMessage = 'Counselor profile updated.';
-      },
-      error: err => this.handleError(err)
     });
   }
 
@@ -268,14 +164,11 @@ export class DashboardComponent implements OnInit {
         error: err => this.handleError(err)
       });
     } else {
-      this.counselorService.getMe().subscribe({
-        next: counselor => {
-          this.counselorProfile = counselor;
-          this.appointmentService.listForCounselor(counselor.id).subscribe({
-            next: data => this.counselorAppointments = data,
-            error: err => this.handleError(err)
-          });
-        },
+      if (!this.counselorProfile) {
+        return;
+      }
+      this.appointmentService.listForCounselor(this.counselorProfile.id).subscribe({
+        next: data => this.counselorAppointments = data,
         error: err => this.handleError(err)
       });
     }
@@ -333,14 +226,11 @@ export class DashboardComponent implements OnInit {
         error: err => this.handleError(err)
       });
     } else {
-      this.counselorService.getMe().subscribe({
-        next: counselor => {
-          this.counselorProfile = counselor;
-          this.reviewService.getReviewsForCounselor(counselor.id).subscribe({
-            next: data => this.reviews = data,
-            error: err => this.handleError(err)
-          });
-        },
+      if (!this.counselorProfile) {
+        return;
+      }
+      this.reviewService.getReviewsForCounselor(this.counselorProfile.id).subscribe({
+        next: data => this.reviews = data,
         error: err => this.handleError(err)
       });
     }
@@ -366,14 +256,11 @@ export class DashboardComponent implements OnInit {
         error: err => this.handleError(err)
       });
     } else {
-      this.counselorService.getMe().subscribe({
-        next: counselor => {
-          this.counselorProfile = counselor;
-          this.sessionNoteService.getNotesForCounselor(counselor.id).subscribe({
-            next: data => this.sessionNotes = data,
-            error: err => this.handleError(err)
-          });
-        },
+      if (!this.counselorProfile) {
+        return;
+      }
+      this.sessionNoteService.getNotesForCounselor(this.counselorProfile.id).subscribe({
+        next: data => this.sessionNotes = data,
         error: err => this.handleError(err)
       });
     }
@@ -436,5 +323,17 @@ export class DashboardComponent implements OnInit {
   private handleError(err: any): void {
     const message = err?.error?.message || err?.message || 'Request failed';
     this.statusMessage = message;
+  }
+
+  private loadTherapistContext(): void {
+    this.counselorService.getMe().subscribe({
+      next: profile => {
+        this.counselorProfile = profile;
+        this.loadAppointments();
+        this.loadReviews();
+        this.loadSessionNotes();
+      },
+      error: err => this.handleError(err)
+    });
   }
 }

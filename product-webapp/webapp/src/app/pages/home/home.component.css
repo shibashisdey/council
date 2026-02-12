@@ -1,0 +1,56 @@
+.home {
+  padding: 32px;
+}
+
+.hero {
+  background: #f6f6f6;
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.subtitle {
+  color: #555;
+  margin: 8px 0 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  background: #1a1a1a;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.btn.outline {
+  background: transparent;
+  color: #1a1a1a;
+  border: 1px solid #1a1a1a;
+}
+
+.top-counselors .list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card {
+  border: 1px solid #e1e1e1;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fff;
+}
+
+.name {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.muted {
+  color: #666;
+}
