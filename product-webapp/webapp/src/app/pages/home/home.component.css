@@ -1,56 +1,99 @@
-.home {
-  padding: 32px;
-}
-
 .hero {
-  background: #f6f6f6;
-  border-radius: 12px;
-  padding: 32px;
-  margin-bottom: 24px;
+  margin: 24px 0 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 32px;
+  align-items: center;
 }
 
-.subtitle {
-  color: #555;
-  margin: 8px 0 16px;
+.hero-copy h1 {
+  font-size: clamp(32px, 3.6vw, 52px);
+  line-height: 1.1;
+  margin-bottom: 12px;
 }
 
-.actions {
+.hero-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.hero-lead {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.hero-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.btn {
-  background: #1a1a1a;
-  color: #fff;
-  padding: 10px 16px;
-  border-radius: 8px;
-  text-decoration: none;
-}
-
-.btn.outline {
-  background: transparent;
-  color: #1a1a1a;
-  border: 1px solid #1a1a1a;
-}
-
-.top-counselors .list {
+.hero-card {
+  background: var(--card);
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
 }
 
-.card {
-  border: 1px solid #e1e1e1;
-  border-radius: 10px;
-  padding: 16px;
-  background: #fff;
-}
-
-.name {
+.hero-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-weight: 600;
-  margin-bottom: 6px;
+  color: var(--muted);
 }
 
-.muted {
-  color: #666;
+.hero-metric strong {
+  font-size: 1.4rem;
+  color: var(--ink);
+}
+
+.hero-highlight {
+  background: linear-gradient(135deg, rgba(47, 125, 99, 0.15), rgba(47, 125, 99, 0.04));
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.feature-grid {
+  margin: 18px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.feature {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+}
+
+.cta-band {
+  margin: 24px 0 48px;
+  padding: 24px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(47, 125, 99, 0.18), rgba(47, 125, 99, 0.04));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .cta-band {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

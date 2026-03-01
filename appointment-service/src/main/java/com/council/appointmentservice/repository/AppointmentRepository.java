@@ -48,4 +48,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             LocalTime startTime,
             List<AppointmentStatus> statuses
     );
+
+    List<Appointment> findByAppointmentDateBefore(LocalDate date);
+
+    void deleteByAppointmentDateBefore(LocalDate date);
 }

@@ -13,6 +13,7 @@ export interface Appointment {
   status: string;
   paymentId?: string;
   createdAt?: string;
+  meetingLink?: string;
 }
 
 export interface CounselorAppointment {
@@ -22,6 +23,7 @@ export interface CounselorAppointment {
   startTime: string;
   endTime: string;
   status: string;
+  meetingLink?: string;
 }
 
 @Injectable({

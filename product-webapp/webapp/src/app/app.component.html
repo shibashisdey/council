@@ -1,11 +1,23 @@
-<header class="app-header">
-  <div class="logo">StackFul Minds</div>
-  <nav class="nav">
-    <a routerLink="/">Home</a>
-    <a routerLink="/dashboard" *ngIf="authState.currentUser">Dashboard</a>
-    <a routerLink="/auth/login" *ngIf="!authState.currentUser">Login</a>
-    <a routerLink="/auth/register" *ngIf="!authState.currentUser">Register</a>
-    <button class="link-btn" (click)="logout()" *ngIf="authState.currentUser">Logout</button>
-  </nav>
-</header>
-<router-outlet></router-outlet>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">C</span>
+      <span class="brand-name">Council</span>
+    </div>
+    <nav class="app-nav">
+      <a class="nav-pill" routerLink="/">Home</a>
+      <a class="nav-pill" routerLink="/counselors" *ngIf="authState.currentUser">Counselors</a>
+      <a class="nav-pill" routerLink="/appointments" *ngIf="authState.currentUser?.role === 'CLIENT'">Appointments</a>
+      <a class="nav-pill" routerLink="/sessions" *ngIf="authState.currentUser?.role === 'THERAPIST'">Sessions</a>
+      <a class="nav-pill" routerLink="/profile/user" *ngIf="authState.currentUser?.role === 'CLIENT'">Profile</a>
+      <a class="nav-pill" routerLink="/profile/counselor" *ngIf="authState.currentUser?.role === 'THERAPIST'">Profile</a>
+      <a class="nav-pill" routerLink="/dashboard" *ngIf="authState.currentUser">Dashboard</a>
+      <a class="nav-pill" routerLink="/auth/login" *ngIf="!authState.currentUser">Login</a>
+      <a class="nav-pill" routerLink="/auth/register" *ngIf="!authState.currentUser">Register</a>
+      <button class="nav-pill" type="button" (click)="logout()" *ngIf="authState.currentUser">Logout</button>
+    </nav>
+  </header>
+  <main class="content-shell">
+    <router-outlet></router-outlet>
+  </main>
+</div>

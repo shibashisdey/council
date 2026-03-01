@@ -11,6 +11,22 @@ export interface AvailabilityBlock {
   reason: string;
 }
 
+export interface WorkingHours {
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface LunchBreak {
+  startTime: string;
+  endTime: string;
+}
+
+export interface CounselorSchedule {
+  workingHours: WorkingHours[];
+  lunchBreak?: LunchBreak | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -22,6 +38,10 @@ export class AvailabilityService {
   getCalendar(counselorId: number, date: string): Observable<AvailabilityBlock[]> {
     const params = new HttpParams().set('date', date);
     return this.http.get<AvailabilityBlock[]>(`${this.baseUrl}/calendar/${counselorId}`, { params });
+  }
+
+  getSchedule(counselorId: number): Observable<CounselorSchedule> {
+    return this.http.get<CounselorSchedule>(`${this.baseUrl}/${counselorId}`);
   }
 
   setWorkingHours(counselorId: number, payload: any): Observable<void> {

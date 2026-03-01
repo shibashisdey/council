@@ -48,13 +48,13 @@ public class UserServiceImpl implements UserService {
         }
 
         return UserResponse.builder()
-                .userId(user.getId())          // ✅ matches DTO
+                .userId(user.getId())
                 .fullName(user.getFullName())
-                //.email(user.getEmail())
-                .age(age)                      // ✅ derived, not stored
+                .age(age)
+                .dateOfBirth(user.getDateOfBirth())
                 .gender(user.getGender())
                 .phoneNumber(user.getPhoneNumber())
-                .city(user.getCity())                   // ✅ placeholder (or remove field)
+                .city(user.getCity())
                 .build();
     }
     @Override

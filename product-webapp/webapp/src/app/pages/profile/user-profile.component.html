@@ -1,0 +1,121 @@
+<section class="profile-shell">
+  <div class="profile-header">
+    <h2>User Profile</h2>
+    <p class="muted">Update your personal details.</p>
+  </div>
+
+  <div class="form-success" *ngIf="message">{{ message }}</div>
+  <div class="form-error" *ngIf="error">{{ error }}</div>
+
+  <section class="profile-card" *ngIf="!editMode">
+    <div class="profile-card__header">
+      <div>
+        <h3>{{ displayValue(profile?.fullName) }}</h3>
+        <p class="muted">User profile details</p>
+      </div>
+      <button type="button" class="btn-ghost" (click)="startEdit()">Edit profile</button>
+    </div>
+    <div class="profile-card__grid">
+      <div>
+        <span class="profile-label">Date of birth</span>
+        <span class="profile-value">{{ displayDob() }}</span>
+      </div>
+      <div>
+        <span class="profile-label">Gender</span>
+        <span class="profile-value">{{ displayValue(profile?.gender) }}</span>
+      </div>
+      <div>
+        <span class="profile-label">Phone</span>
+        <span class="profile-value">{{ displayPhone() }}</span>
+      </div>
+      <div>
+        <span class="profile-label">City</span>
+        <span class="profile-value">{{ displayValue(profile?.city) }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="auth-card" *ngIf="editMode">
+    <form class="form-grid" #profileForm="ngForm" (ngSubmit)="save()">
+      <div class="form-field">
+        <label>Full name</label>
+        <input
+          [(ngModel)]="form.fullName"
+          name="fullName"
+          required
+          minlength="2"
+          maxlength="80"
+          #fullName="ngModel"
+        />
+        <span class="form-error" *ngIf="fullName.invalid && (fullName.dirty || fullName.touched)">
+          Please enter your full name.
+        </span>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Date of birth</label>
+          <div class="dob-row">
+            <input
+              type="date"
+              [(ngModel)]="form.dateOfBirth"
+              name="dateOfBirth"
+              [max]="today"
+              required
+              #dateOfBirth="ngModel"
+            />
+            <span class="form-help">Used to personalize your care journey.</span>
+            <span class="form-error" *ngIf="dateOfBirth.invalid && (dateOfBirth.dirty || dateOfBirth.touched)">
+              Date of birth cannot be in the future.
+            </span>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Gender</label>
+          <select [(ngModel)]="form.gender" name="gender" required #gender="ngModel">
+            <option value="">Select</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Non-binary">Non-binary</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+          <span class="form-error" *ngIf="gender.invalid && (gender.dirty || gender.touched)">
+            Please select a gender option.
+          </span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Phone number</label>
+        <div class="phone-row">
+          <select class="country-code" [(ngModel)]="form.countryCode" name="countryCode">
+            <option value="+91">+91 (IN)</option>
+            <option value="+1">+1 (US)</option>
+            <option value="+44">+44 (UK)</option>
+            <option value="+61">+61 (AU)</option>
+            <option value="+971">+971 (AE)</option>
+          </select>
+          <input
+            [(ngModel)]="form.phoneNumber"
+            name="phoneNumber"
+            placeholder="Phone number"
+            pattern="^[0-9]{7,15}$"
+            #phoneNumber="ngModel"
+          />
+        </div>
+        <span class="form-help">Numbers only, 7 to 15 digits.</span>
+        <span class="form-error" *ngIf="phoneNumber.invalid && (phoneNumber.dirty || phoneNumber.touched)">
+          Please enter a valid phone number.
+        </span>
+      </div>
+      <div class="form-field">
+        <label>City</label>
+        <input [(ngModel)]="form.city" name="city" />
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-ghost" (click)="cancelEdit()" [disabled]="loading">
+          Cancel
+        </button>
+        <button type="submit" [disabled]="loading || profileForm.invalid">Save changes</button>
+      </div>
+    </form>
+  </section>
+</section>

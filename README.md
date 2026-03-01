@@ -10,10 +10,11 @@ StackFul Minds is a Spring Boot microservices system for therapy sessions. It in
 4. `counselor-service` — `8090`
 5. `appointment-service` — `8083`
 6. `availability-service` — `8085`
-7. `review-service` — `8086`
-8. `notification-service` — `8088`
-9. `payment-service` — `8087`
-10. `user-service` — `8084`
+7. `link-gererator-service` — `8082`
+8. `review-service` — `8086`
+9. `notification-service` — `8088`
+10. `payment-service` — `8087`
+11. `user-service` — `8084`
 
 **High-Level Flow**
 1. Auth service registers and logs in users, issues JWT.
@@ -23,8 +24,9 @@ StackFul Minds is a Spring Boot microservices system for therapy sessions. It in
 5. Appointment service orchestrates booking and calls availability service.
 6. Availability service enforces working hours, lunch breaks, unavailability, holidays, and daily caps.
 7. Payment service confirms appointments and updates availability.
-8. Review service stores counselor session notes and client reviews.
-9. Notification service generates PDF and uploads to Cloudflare R2.
+8. Link gererator service generates Jitsi meeting links for confirmed appointments.
+9. Review service stores counselor session notes and client reviews.
+10. Notification service generates PDF and uploads to Cloudflare R2.
 
 **Auth And Gateway**
 1. JWT is issued by auth service.
@@ -111,6 +113,12 @@ Payment checks:
 1. Appointment must be `PENDING_PAYMENT` to create payment.
 2. Confirm only if appointment is `PENDING_PAYMENT` or already `CONFIRMED`.
 
+**Link Gererator Service (Internal)**
+1. `POST /internal/meeting-links` — create or get meeting link
+2. `GET /internal/meeting-links/{appointmentId}` — fetch link by appointment
+3. `PUT /internal/meeting-links/{appointmentId}` — update times
+4. `DELETE /internal/meeting-links/{appointmentId}` — delete link
+
 **Review Service**
 Two separate domains:
 1. Session Notes (counselor → user)
@@ -153,9 +161,10 @@ Set in `notification-service/src/main/resources/application.properties`:
 5. `counselor-service`
 6. `availability-service`
 7. `appointment-service`
-8. `payment-service`
-9. `review-service`
-10. `notification-service`
+8. `link-gererator-service`
+9. `payment-service`
+10. `review-service`
+11. `notification-service`
 
 **Postman Quick Start**
 1. Register therapist: `POST http://localhost:8081/auth/register`

@@ -11,6 +11,12 @@ import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { HomeComponent } from './pages/home/home.component';
 import { ProfileSetupComponent } from './pages/setup/profile-setup.component';
 import { ScheduleSetupComponent } from './pages/setup/schedule-setup.component';
+import { UserProfileComponent } from './pages/profile/user-profile.component';
+import { CounselorProfileComponent } from './pages/profile/counselor-profile.component';
+import { CounselorListComponent } from './pages/counselors/counselor-list.component';
+import { CounselorDetailComponent } from './pages/counselors/counselor-detail.component';
+import { ClientAppointmentsComponent } from './pages/appointments/client-appointments.component';
+import { CounselorSessionsComponent } from './pages/sessions/counselor-sessions.component';
 
 @NgModule({
   declarations: [
@@ -18,7 +24,13 @@ import { ScheduleSetupComponent } from './pages/setup/schedule-setup.component';
     DashboardComponent,
     HomeComponent,
     ProfileSetupComponent,
-    ScheduleSetupComponent
+    ScheduleSetupComponent,
+    UserProfileComponent,
+    CounselorProfileComponent,
+    CounselorListComponent,
+    CounselorDetailComponent,
+    ClientAppointmentsComponent,
+    CounselorSessionsComponent
   ],
   imports: [
     BrowserModule,

@@ -1,12 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthStateService, AuthUser } from '../../core/auth-state.service';
-import { UserService, UserProfile } from '../../services/user.service';
-import { CounselorService, CounselorProfile } from '../../services/counselor.service';
-import { AvailabilityService, AvailabilityBlock } from '../../services/availability.service';
+import { UserProfile, UserService } from '../../services/user.service';
+import { CounselorProfile, CounselorService } from '../../services/counselor.service';
 import { AppointmentService, Appointment, CounselorAppointment } from '../../services/appointment.service';
-import { PaymentService, PaymentResponse } from '../../services/payment.service';
-import { ReviewService, Review } from '../../services/review.service';
-import { SessionNoteService, SessionNote } from '../../services/session-note.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,325 +11,90 @@ import { SessionNoteService, SessionNote } from '../../services/session-note.ser
 })
 export class DashboardComponent implements OnInit {
   currentUser: AuthUser | null = null;
-
   userProfile: UserProfile | null = null;
   counselorProfile: CounselorProfile | null = null;
-
-  counselors: CounselorProfile[] = [];
-  selectedCounselor: CounselorProfile | null = null;
-  availabilityDate = '';
-  availabilityBlocks: AvailabilityBlock[] = [];
 
   appointments: Appointment[] = [];
   counselorAppointments: CounselorAppointment[] = [];
 
-  reviews: Review[] = [];
-  sessionNotes: SessionNote[] = [];
-
   statusMessage = '';
-
-  bookingForm = {
-    counselorId: 0,
-    appointmentDate: '',
-    startTime: ''
-  };
-
-  rescheduleForm = {
-    appointmentId: 0,
-    newDate: '',
-    newStartTime: ''
-  };
-
-  paymentForm = {
-    appointmentId: 0,
-    amount: 0
-  };
-
-  reviewForm = {
-    appointmentId: 0,
-    rating: 5,
-    comment: ''
-  };
-
-  noteForm = {
-    appointmentId: 0,
-    sessionDate: '',
-    summary: '',
-    observations: '',
-    recommendations: '',
-    privateNotes: ''
-  };
-
-  workingHoursForm = {
-    dayOfWeek: 'MONDAY',
-    startTime: '09:00',
-    endTime: '17:00'
-  };
-
-  lunchBreakForm = {
-    startTime: '13:00',
-    endTime: '14:00'
-  };
-
-  unavailabilityForm = {
-    date: '',
-    startTime: '',
-    endTime: '',
-    reason: 'COUNSELOR_LEAVE'
-  };
 
   constructor(
     private authState: AuthStateService,
     private userService: UserService,
     private counselorService: CounselorService,
-    private availabilityService: AvailabilityService,
-    private appointmentService: AppointmentService,
-    private paymentService: PaymentService,
-    private reviewService: ReviewService,
-    private sessionNoteService: SessionNoteService
+    private appointmentService: AppointmentService
   ) {}
 
   ngOnInit(): void {
     this.currentUser = this.authState.currentUser;
-    this.loadUserProfile();
-    if (this.currentUser?.role === 'CLIENT') {
-      this.loadCounselors();
-      this.loadAppointments();
-      this.loadReviews();
-      this.loadSessionNotes();
-      return;
-    }
-    this.loadTherapistContext();
+    this.loadProfile();
   }
 
-  private loadUserProfile(): void {
-    this.userService.getMe().subscribe({
+  private loadProfile(): void {
+    if (!this.currentUser) {
+      return;
+    }
+    if (this.currentUser.role === 'CLIENT') {
+      this.userService.getMe().subscribe({
+        next: profile => {
+          this.userProfile = profile;
+          this.loadAppointments();
+        },
+        error: () => {
+          this.userProfile = null;
+        }
+      });
+      return;
+    }
+
+    this.counselorService.getMe().subscribe({
       next: profile => {
-        this.userProfile = profile;
+        this.counselorProfile = profile;
+        this.loadAppointments();
       },
       error: () => {
-        this.userProfile = null;
+        this.counselorProfile = null;
       }
     });
   }
 
-  loadCounselors(): void {
-    this.counselorService.listActive().subscribe({
-      next: data => this.counselors = data,
-      error: err => this.handleError(err)
-    });
-  }
-
-  selectCounselor(counselorId: number): void {
-    this.counselorService.getById(counselorId).subscribe({
-      next: counselor => {
-        this.selectedCounselor = counselor;
-        this.bookingForm.counselorId = counselor.id;
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  loadAvailability(): void {
-    if (!this.selectedCounselor || !this.availabilityDate) {
-      return;
-    }
-    this.availabilityService.getCalendar(this.selectedCounselor.id, this.availabilityDate).subscribe({
-      next: blocks => this.availabilityBlocks = blocks,
-      error: err => this.handleError(err)
-    });
-  }
-
-  bookAppointment(): void {
-    this.appointmentService.create(this.bookingForm).subscribe({
-      next: appointment => {
-        this.statusMessage = `Appointment created (${appointment.status}).`;
-        this.loadAppointments();
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  loadAppointments(): void {
+  private loadAppointments(): void {
     if (!this.currentUser) {
       return;
     }
     if (this.currentUser.role === 'CLIENT') {
       this.appointmentService.listForClient().subscribe({
         next: data => this.appointments = data,
-        error: err => this.handleError(err)
+        error: () => this.statusMessage = 'Unable to load appointments.'
       });
-    } else {
-      if (!this.counselorProfile) {
-        return;
-      }
-      this.appointmentService.listForCounselor(this.counselorProfile.id).subscribe({
-        next: data => this.counselorAppointments = data,
-        error: err => this.handleError(err)
-      });
-    }
-  }
-
-  rescheduleAppointment(): void {
-    this.appointmentService.reschedule(this.rescheduleForm.appointmentId, {
-      newDate: this.rescheduleForm.newDate,
-      newStartTime: this.rescheduleForm.newStartTime
-    }).subscribe({
-      next: () => {
-        this.statusMessage = 'Appointment rescheduled.';
-        this.loadAppointments();
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  cancelAppointment(appointmentId: number): void {
-    this.appointmentService.cancel(appointmentId).subscribe({
-      next: () => {
-        this.statusMessage = 'Appointment cancelled.';
-        this.loadAppointments();
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  createPayment(): void {
-    this.paymentService.createPayment(this.paymentForm).subscribe({
-      next: (payment: PaymentResponse) => {
-        this.statusMessage = `Payment created (${payment.status}).`;
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  simulatePaymentSuccess(appointmentId: number): void {
-    this.paymentService.simulateSuccess(appointmentId).subscribe({
-      next: () => {
-        this.statusMessage = 'Payment confirmed (dev).';
-        this.loadAppointments();
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  loadReviews(): void {
-    if (!this.currentUser) {
       return;
     }
-    if (this.currentUser.role === 'CLIENT') {
-      this.reviewService.getReviewsForUser(this.currentUser.userId).subscribe({
-        next: data => this.reviews = data,
-        error: err => this.handleError(err)
-      });
-    } else {
-      if (!this.counselorProfile) {
-        return;
-      }
-      this.reviewService.getReviewsForCounselor(this.counselorProfile.id).subscribe({
-        next: data => this.reviews = data,
-        error: err => this.handleError(err)
-      });
-    }
-  }
 
-  createReview(): void {
-    this.reviewService.createReview(this.reviewForm).subscribe({
-      next: () => {
-        this.statusMessage = 'Review created.';
-        this.loadReviews();
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  loadSessionNotes(): void {
-    if (!this.currentUser) {
-      return;
-    }
-    if (this.currentUser.role === 'CLIENT') {
-      this.sessionNoteService.getNotesForUser(this.currentUser.userId).subscribe({
-        next: data => this.sessionNotes = data,
-        error: err => this.handleError(err)
-      });
-    } else {
-      if (!this.counselorProfile) {
-        return;
-      }
-      this.sessionNoteService.getNotesForCounselor(this.counselorProfile.id).subscribe({
-        next: data => this.sessionNotes = data,
-        error: err => this.handleError(err)
-      });
-    }
-  }
-
-  createSessionNote(): void {
-    const payload = {
-      ...this.noteForm,
-      sessionDate: this.noteForm.sessionDate || null
-    };
-    this.sessionNoteService.create(payload).subscribe({
-      next: () => {
-        this.statusMessage = 'Session note created.';
-        this.loadSessionNotes();
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  shareSessionNote(noteId: number, shared: boolean): void {
-    this.sessionNoteService.share(noteId, { shared }).subscribe({
-      next: () => {
-        this.statusMessage = 'Session note updated.';
-        this.loadSessionNotes();
-      },
-      error: err => this.handleError(err)
-    });
-  }
-
-  setWorkingHours(): void {
     if (!this.counselorProfile) {
       return;
     }
-    this.availabilityService.setWorkingHours(this.counselorProfile.id, this.workingHoursForm).subscribe({
-      next: () => this.statusMessage = 'Working hours set.',
-      error: err => this.handleError(err)
+    this.appointmentService.listForCounselor(this.counselorProfile.id).subscribe({
+      next: data => this.counselorAppointments = data,
+      error: () => this.statusMessage = 'Unable to load sessions.'
     });
   }
 
-  setLunchBreak(): void {
-    if (!this.counselorProfile) {
-      return;
+  get nextAppointment(): Appointment | null {
+    if (!this.appointments.length) {
+      return null;
     }
-    this.availabilityService.setLunchBreak(this.counselorProfile.id, this.lunchBreakForm).subscribe({
-      next: () => this.statusMessage = 'Lunch break set.',
-      error: err => this.handleError(err)
-    });
+    return [...this.appointments].sort((a, b) =>
+      `${a.appointmentDate}T${a.startTime}`.localeCompare(`${b.appointmentDate}T${b.startTime}`)
+    )[0];
   }
 
-  addUnavailability(): void {
-    if (!this.counselorProfile) {
-      return;
+  get nextSession(): CounselorAppointment | null {
+    if (!this.counselorAppointments.length) {
+      return null;
     }
-    this.availabilityService.addUnavailability(this.counselorProfile.id, this.unavailabilityForm).subscribe({
-      next: () => this.statusMessage = 'Unavailability added.',
-      error: err => this.handleError(err)
-    });
-  }
-
-  private handleError(err: any): void {
-    const message = err?.error?.message || err?.message || 'Request failed';
-    this.statusMessage = message;
-  }
-
-  private loadTherapistContext(): void {
-    this.counselorService.getMe().subscribe({
-      next: profile => {
-        this.counselorProfile = profile;
-        this.loadAppointments();
-        this.loadReviews();
-        this.loadSessionNotes();
-      },
-      error: err => this.handleError(err)
-    });
+    return [...this.counselorAppointments].sort((a, b) =>
+      `${a.appointmentDate}T${a.startTime}`.localeCompare(`${b.appointmentDate}T${b.startTime}`)
+    )[0];
   }
 }

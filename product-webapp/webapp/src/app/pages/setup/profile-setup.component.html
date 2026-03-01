@@ -1,36 +1,71 @@
-<div class="setup">
-  <h2>Complete Your Profile</h2>
-  <p class="muted" *ngIf="!isTherapist">
-    Please fill in your basic details to continue.
-  </p>
-  <p class="muted" *ngIf="isTherapist">
-    Please fill in your counselor profile to continue.
-  </p>
+<section class="setup-shell">
+  <div class="setup-header">
+    <h2>Complete Your Profile</h2>
+    <p class="muted" *ngIf="!isTherapist">
+      Please fill in your basic details to continue.
+    </p>
+    <p class="muted" *ngIf="isTherapist">
+      Please fill in your counselor profile to continue.
+    </p>
+  </div>
 
-  <div class="status" *ngIf="statusMessage">{{ statusMessage }}</div>
+  <div class="form-success" *ngIf="statusMessage">{{ statusMessage }}</div>
 
-  <section class="card" *ngIf="!isTherapist">
-    <h3>User Profile</h3>
-    <div class="form">
-      <input placeholder="Full name" [(ngModel)]="userProfileForm.fullName" />
-      <input placeholder="Phone number" [(ngModel)]="userProfileForm.phoneNumber" />
-      <input placeholder="Gender" [(ngModel)]="userProfileForm.gender" />
-      <input type="date" placeholder="Date of birth" [(ngModel)]="userProfileForm.dateOfBirth" />
-      <input placeholder="City" [(ngModel)]="userProfileForm.city" />
+  <section class="auth-card" *ngIf="!isTherapist">
+    <h3 class="auth-title">User Profile</h3>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Full name</label>
+      <input placeholder="Full name" [(ngModel)]="userProfileForm.fullName" required />
+      </div>
+      <div class="form-field">
+        <label>Phone number</label>
+        <input placeholder="Phone number" [(ngModel)]="userProfileForm.phoneNumber" />
+      </div>
+      <div class="form-field">
+        <label>Gender</label>
+      <input placeholder="Gender" [(ngModel)]="userProfileForm.gender" required />
+      </div>
+      <div class="form-field">
+        <label>Date of birth</label>
+      <input type="date" placeholder="Date of birth" [(ngModel)]="userProfileForm.dateOfBirth" required />
+      </div>
+      <div class="form-field">
+        <label>City</label>
+        <input placeholder="City" [(ngModel)]="userProfileForm.city" />
+      </div>
       <button (click)="saveUserProfile()" [disabled]="loading">Save and Continue</button>
     </div>
   </section>
 
-  <section class="card" *ngIf="isTherapist">
-    <h3>Counselor Profile</h3>
-    <div class="form">
-      <input placeholder="Full name" [(ngModel)]="counselorProfileForm.fullName" />
-      <input placeholder="Qualification" [(ngModel)]="counselorProfileForm.qualification" />
-      <input type="number" placeholder="Experience years" [(ngModel)]="counselorProfileForm.experienceYears" />
-      <input placeholder="Bio" [(ngModel)]="counselorProfileForm.bio" />
-      <input type="number" placeholder="Price per session" [(ngModel)]="counselorProfileForm.pricePerSession" />
-      <input placeholder="Specializations (comma separated)" [(ngModel)]="counselorProfileForm.specializations" />
+  <section class="auth-card" *ngIf="isTherapist">
+    <h3 class="auth-title">Counselor Profile</h3>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Full name</label>
+        <input placeholder="Full name" [(ngModel)]="counselorProfileForm.fullName" />
+      </div>
+      <div class="form-field">
+        <label>Qualification</label>
+        <input placeholder="Qualification" [(ngModel)]="counselorProfileForm.qualification" />
+      </div>
+      <div class="form-field">
+        <label>Experience years</label>
+        <input type="number" placeholder="Experience years" [(ngModel)]="counselorProfileForm.experienceYears" />
+      </div>
+      <div class="form-field">
+        <label>Bio</label>
+        <input placeholder="Bio" [(ngModel)]="counselorProfileForm.bio" />
+      </div>
+      <div class="form-field">
+        <label>Price per session</label>
+        <input type="number" placeholder="Price per session" [(ngModel)]="counselorProfileForm.pricePerSession" />
+      </div>
+      <div class="form-field">
+        <label>Specializations</label>
+        <input placeholder="Specializations (comma separated)" [(ngModel)]="counselorProfileForm.specializations" />
+      </div>
       <button (click)="saveCounselorProfile()" [disabled]="loading">Save and Continue</button>
     </div>
   </section>
-</div>
+</section>

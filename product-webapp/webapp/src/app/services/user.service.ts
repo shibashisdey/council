@@ -7,6 +7,7 @@ export interface UserProfile {
   userId: number;
   fullName: string;
   age?: number;
+  dateOfBirth?: string;
   gender?: string;
   phoneNumber?: string;
   city?: string;

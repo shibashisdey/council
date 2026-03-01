@@ -1,27 +1,12 @@
-.setup {
-  padding: 32px;
-  max-width: 680px;
+.setup-shell {
+  max-width: 720px;
   margin: 0 auto;
-}
-
-.card {
-  border: 1px solid #e1e1e1;
-  border-radius: 10px;
-  padding: 20px;
-  background: #fff;
-  margin-bottom: 16px;
-}
-
-.form {
+  padding: 24px 0 48px;
   display: grid;
-  gap: 12px;
+  gap: 18px;
 }
 
-.muted {
-  color: #666;
-}
-
-.status {
-  margin: 12px 0;
-  color: #b00020;
+.setup-header {
+  display: grid;
+  gap: 6px;
 }

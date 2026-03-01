@@ -1,33 +1,50 @@
-<div class="setup">
-  <h2>Set Your Schedule</h2>
-  <p class="muted">Add your working hours and lunch break to continue.</p>
+<section class="setup-shell">
+  <div class="setup-header">
+    <h2>Set Your Schedule</h2>
+    <p class="muted">Add your working hours and lunch break to continue.</p>
+  </div>
 
-  <div class="status" *ngIf="statusMessage">{{ statusMessage }}</div>
+  <div class="form-success" *ngIf="statusMessage">{{ statusMessage }}</div>
 
-  <section class="card">
-    <h3>Working Hours</h3>
-    <div class="form">
-      <select [(ngModel)]="workingHoursForm.dayOfWeek">
-        <option>MONDAY</option>
-        <option>TUESDAY</option>
-        <option>WEDNESDAY</option>
-        <option>THURSDAY</option>
-        <option>FRIDAY</option>
-        <option>SATURDAY</option>
-        <option>SUNDAY</option>
-      </select>
-      <input type="time" [(ngModel)]="workingHoursForm.startTime" />
-      <input type="time" [(ngModel)]="workingHoursForm.endTime" />
+  <section class="auth-card">
+    <h3 class="auth-title">Working Hours</h3>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Day of week</label>
+        <select [(ngModel)]="workingHoursForm.dayOfWeek">
+          <option>MONDAY</option>
+          <option>TUESDAY</option>
+          <option>WEDNESDAY</option>
+          <option>THURSDAY</option>
+          <option>FRIDAY</option>
+          <option>SATURDAY</option>
+          <option>SUNDAY</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Start time</label>
+        <input type="time" [(ngModel)]="workingHoursForm.startTime" />
+      </div>
+      <div class="form-field">
+        <label>End time</label>
+        <input type="time" [(ngModel)]="workingHoursForm.endTime" />
+      </div>
     </div>
   </section>
 
-  <section class="card">
-    <h3>Lunch Break</h3>
-    <div class="form">
-      <input type="time" [(ngModel)]="lunchBreakForm.startTime" />
-      <input type="time" [(ngModel)]="lunchBreakForm.endTime" />
+  <section class="auth-card">
+    <h3 class="auth-title">Lunch Break</h3>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Start time</label>
+        <input type="time" [(ngModel)]="lunchBreakForm.startTime" />
+      </div>
+      <div class="form-field">
+        <label>End time</label>
+        <input type="time" [(ngModel)]="lunchBreakForm.endTime" />
+      </div>
     </div>
   </section>
 
   <button (click)="saveSchedule()" [disabled]="loading">Save Schedule</button>
-</div>
+</section>

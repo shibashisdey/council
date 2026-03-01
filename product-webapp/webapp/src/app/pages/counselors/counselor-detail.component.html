@@ -1,0 +1,50 @@
+﻿<section class="detail-shell" *ngIf="counselor">
+  <div class="detail-card">
+    <div class="detail-header">
+      <div>
+        <h2>{{ counselor.fullName }}</h2>
+        <p class="muted">{{ counselor.qualification }} · {{ counselor.experienceYears }} yrs</p>
+      </div>
+      <span class="price">Rs {{ counselor.pricePerSession }}</span>
+    </div>
+    <p class="bio">{{ counselor.bio }}</p>
+    <div class="tags">
+      <span class="tag" *ngFor="let spec of counselor.specializations">{{ spec }}</span>
+    </div>
+  </div>
+
+  <div class="detail-card">
+    <h3>Book a session</h3>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Date</label>
+        <input type="date" [(ngModel)]="appointmentDate" (change)="onDateChange()" />
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-card" *ngIf="appointmentDate">
+    <h3>Pick a slot</h3>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Available slots (1 hour)</label>
+        <div class="slot-grid" *ngIf="slots.length">
+          <button
+            class="slot"
+            type="button"
+            *ngFor="let slot of slots"
+            [disabled]="slot.status !== 'AVAILABLE'"
+            [class.selected]="selectedSlot?.startTime === slot.startTime"
+            (click)="selectSlot(slot)">
+            {{ formatTime(slot.startTime) }} - {{ formatTime(slot.endTime) }}
+          </button>
+        </div>
+        <p class="muted" *ngIf="loadingSlots">Loading slots...</p>
+        <p class="muted" *ngIf="!loadingSlots && slots.length === 0">No slots for this date.</p>
+      </div>
+      <button (click)="book()">Book appointment</button>
+      <p class="form-success" *ngIf="message">{{ message }}</p>
+      <p class="form-error" *ngIf="error">{{ error }}</p>
+    </div>
+  </div>
+</section>

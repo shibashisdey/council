@@ -1,27 +1,50 @@
-<div class="home">
-  <section class="hero">
-    <div>
-      <h1>StackFul Minds</h1>
-      <p class="subtitle">Find the right counselor and manage your sessions with ease.</p>
-      <div class="actions">
-        <a class="btn" routerLink="/auth/login">Login</a>
-        <a class="btn outline" routerLink="/auth/register">Register</a>
-      </div>
+<section class="hero">
+  <div class="hero-copy">
+    <p class="hero-kicker">Council · Mental Wellness Platform</p>
+    <h1>Find the right counselor and manage your sessions with ease.</h1>
+    <p class="hero-lead">
+      Book sessions, manage appointments, and stay connected with your counselor without friction.
+    </p>
+    <div class="hero-actions">
+      <a class="btn-primary" routerLink="/auth/login">Login</a>
+      <a class="btn-ghost" routerLink="/auth/register">Register</a>
     </div>
-  </section>
-
-  <section class="top-counselors">
-    <h2>Top Counselors</h2>
-    <div *ngIf="loading" class="muted">Loading counselors...</div>
-    <div *ngIf="errorMessage" class="muted">{{ errorMessage }}</div>
-
-    <div class="list" *ngIf="!loading && !errorMessage">
-      <div class="card" *ngFor="let counselor of topCounselors">
-        <div class="name">{{ counselor.fullName }}</div>
-        <div class="muted">{{ counselor.qualification }} - {{ counselor.experienceYears }} yrs</div>
-        <div class="muted">Rs {{ counselor.pricePerSession }} per session</div>
-      </div>
-      <div class="muted" *ngIf="topCounselors.length === 0">No counselors available yet.</div>
+  </div>
+  <div class="hero-card">
+    <div class="hero-metric">
+      <span>Secure workflow</span>
+      <strong>Trusted</strong>
     </div>
-  </section>
-</div>
+    <div class="hero-metric">
+      <span>Confidential sessions</span>
+      <strong>Private</strong>
+    </div>
+    <div class="hero-highlight">
+      <h3>Designed for care</h3>
+      <p>Thoughtful scheduling and clear progress tracking.</p>
+    </div>
+  </div>
+</section>
+
+<section class="feature-grid">
+  <div class="feature">
+    <h3>Tailored matching</h3>
+    <p>Find counselors by specialization, experience, and pricing.</p>
+  </div>
+  <div class="feature">
+    <h3>Simple scheduling</h3>
+    <p>Pick a date, choose a slot, and confirm in minutes.</p>
+  </div>
+  <div class="feature">
+    <h3>Everything in one place</h3>
+    <p>Manage your profile, sessions, and follow-ups with clarity.</p>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div>
+    <h2>Ready to begin?</h2>
+    <p>Register as a client or counselor and set up your profile in minutes.</p>
+  </div>
+  <a class="btn-primary" routerLink="/auth/register">Create account</a>
+</section>

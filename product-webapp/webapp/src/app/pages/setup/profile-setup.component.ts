@@ -55,7 +55,9 @@ export class ProfileSetupComponent implements OnInit {
     this.userService.getMe().subscribe({
       next: profile => {
         this.userProfile = profile;
-        if (profile && profile.fullName) {
+        const hasAge = profile?.age !== null && profile?.age !== undefined;
+        const isComplete = !!(profile && profile.fullName && profile.gender && hasAge);
+        if (isComplete) {
           this.router.navigate(['/dashboard']);
           return;
         }
@@ -63,7 +65,7 @@ export class ProfileSetupComponent implements OnInit {
           fullName: profile.fullName || '',
           phoneNumber: profile.phoneNumber || '',
           gender: profile.gender || '',
-          dateOfBirth: '',
+          dateOfBirth: this.normalizeDateInput((profile as any).dateOfBirth),
           city: profile.city || ''
         };
       },
@@ -77,7 +79,8 @@ export class ProfileSetupComponent implements OnInit {
     this.counselorService.getMe().subscribe({
       next: profile => {
         this.counselorProfile = profile;
-        if (profile && profile.fullName) {
+        const isComplete = !!(profile && profile.fullName && profile.qualification);
+        if (isComplete) {
           this.router.navigate(['/setup/schedule']);
           return;
         }
@@ -150,5 +153,23 @@ export class ProfileSetupComponent implements OnInit {
   private handleError(err: any): void {
     const message = err?.error?.message || err?.message || 'Request failed';
     this.statusMessage = message;
+  }
+
+  private normalizeDateInput(value?: string | null): string {
+    if (!value) {
+      return '';
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return value;
+    }
+    if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+      const [day, month, year] = value.split('-');
+      return `${year}-${month}-${day}`;
+    }
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().split('T')[0];
+    }
+    return '';
   }
 }

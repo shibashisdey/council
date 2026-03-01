@@ -14,17 +14,29 @@ export class LoginComponent implements OnInit {
     password: ''
   };
 
+  errorMessage = '';
+  loading = false;
+
   constructor(private authService: AuthService, private router: Router) { }
 
   ngOnInit(): void {
   }
 
   login(): void {
+    this.errorMessage = '';
+    this.loading = true;
     this.authService.login({
       email: this.credentials.identifier,
       password: this.credentials.password
-    }).subscribe(() => {
-      this.router.navigate(['/setup/profile']);
+    }).subscribe({
+      next: () => {
+        this.loading = false;
+        this.router.navigate(['/setup/profile']);
+      },
+      error: () => {
+        this.loading = false;
+        this.errorMessage = 'Invalid email or password.';
+      }
     });
   }
 }

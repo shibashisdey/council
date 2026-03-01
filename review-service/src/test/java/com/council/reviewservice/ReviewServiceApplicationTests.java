@@ -1,4 +1,4 @@
-package com.stackroute.reviewservice;
+package com.council.reviewservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

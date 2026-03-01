@@ -13,6 +13,8 @@ public class UserResponse {
 
     private Integer age;
 
+    private java.time.LocalDate dateOfBirth;
+
     private String gender;
 
     private String phoneNumber;

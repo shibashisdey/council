@@ -1,0 +1,32 @@
+<section class="list-shell">
+  <div class="list-header">
+    <div>
+      <h2>Counselors</h2>
+      <p class="muted">Browse verified counselors and book a session.</p>
+    </div>
+    <button class="btn-ghost" type="button" (click)="loadCounselors()">Refresh</button>
+  </div>
+
+  <div class="muted" *ngIf="loading">Loading counselors...</div>
+  <div class="form-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="card-grid" *ngIf="!loading">
+    <div class="card" *ngFor="let counselor of counselors">
+      <div class="card-top">
+        <div>
+          <h3>{{ counselor.fullName }}</h3>
+          <p class="muted">{{ counselor.qualification }} · {{ counselor.experienceYears }} yrs</p>
+        </div>
+        <span class="pill" *ngIf="counselor.active">Active</span>
+      </div>
+      <p class="small">{{ counselor.bio }}</p>
+      <div class="tags">
+        <span class="tag" *ngFor="let spec of counselor.specializations">{{ spec }}</span>
+      </div>
+      <div class="card-footer">
+        <span class="price">Rs {{ counselor.pricePerSession }}</span>
+        <button type="button" class="btn-primary" (click)="viewCounselor(counselor.id)">View</button>
+      </div>
+    </div>
+  </div>
+</section>

@@ -71,6 +71,13 @@
 			<scope>provided</scope>
 		</dependency>
 
+		<!-- AWS S3 SDK (for Cloudflare R2) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.25.61</version>
+		</dependency>
+
 		<!-- Testing -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -15,14 +15,29 @@ export class RegisterComponent implements OnInit {
     role: 'CLIENT'
   };
 
+  errorMessage = '';
+  successMessage = '';
+  loading = false;
+
   constructor(private authService: AuthService, private router: Router) { }
 
   ngOnInit(): void {
   }
 
   register(): void {
-    this.authService.register(this.user).subscribe(() => {
-      this.router.navigate(['/auth/login']);
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.loading = true;
+    this.authService.register(this.user).subscribe({
+      next: () => {
+        this.loading = false;
+        this.successMessage = 'Registration successful. Please sign in.';
+        setTimeout(() => this.router.navigate(['/auth/login']), 800);
+      },
+      error: () => {
+        this.loading = false;
+        this.errorMessage = 'Registration failed. Try a different email.';
+      }
     });
   }
 }

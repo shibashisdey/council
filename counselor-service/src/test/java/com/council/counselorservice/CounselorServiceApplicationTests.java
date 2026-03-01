@@ -1,4 +1,4 @@
-package com.stackroute.counselorservice;
+package com.council.counselorservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

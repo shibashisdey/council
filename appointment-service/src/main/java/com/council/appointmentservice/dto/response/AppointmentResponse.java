@@ -33,4 +33,6 @@ public class AppointmentResponse {
     private String paymentId;
 
     private LocalDateTime createdAt;
+
+    private String meetingLink;
 }

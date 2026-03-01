@@ -4,6 +4,7 @@ import com.council.availabilityservice.dto.request.AddUnavailabilityRequest;
 import com.council.availabilityservice.dto.request.SetLunchBreakRequest;
 import com.council.availabilityservice.dto.request.SetWorkingHoursRequest;
 import com.council.availabilityservice.dto.response.CounselorAvailabilityResponse;
+import com.council.availabilityservice.dto.response.CounselorScheduleResponse;
 import com.council.availabilityservice.service.CounselorScheduleService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -66,5 +67,10 @@ public class CounselorScheduleController {
         List<CounselorAvailabilityResponse> availability =
                 counselorScheduleService.getAvailabilityForDate(counselorId, date);
         return ResponseEntity.ok(availability);
+    }
+
+    @GetMapping("/{counselorId}")
+    public ResponseEntity<CounselorScheduleResponse> getSchedule(@PathVariable Long counselorId) {
+        return ResponseEntity.ok(counselorScheduleService.getSchedule(counselorId));
     }
 }

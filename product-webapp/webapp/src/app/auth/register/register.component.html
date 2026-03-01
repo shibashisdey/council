@@ -1,21 +1,23 @@
-<div>
-  <h2>Register</h2>
-  <form (ngSubmit)="register()">
-    <div>
-      <label for="email">Email:</label>
+<section class="auth-card">
+  <h2 class="auth-title">Create your account</h2>
+  <form class="form-grid" (ngSubmit)="register()">
+    <div class="form-field">
+      <label for="email">Email</label>
       <input type="email" id="email" [(ngModel)]="user.email" name="email" required>
     </div>
-    <div>
-      <label for="password">Password:</label>
+    <div class="form-field">
+      <label for="password">Password</label>
       <input type="password" id="password" [(ngModel)]="user.password" name="password" required>
     </div>
-    <div>
-      <label for="role">Role:</label>
+    <div class="form-field">
+      <label for="role">Register As</label>
       <select id="role" [(ngModel)]="user.role" name="role">
         <option value="CLIENT">Client</option>
         <option value="THERAPIST">Therapist (Counselor)</option>
       </select>
     </div>
-    <button type="submit">Register</button>
+    <button type="submit" [disabled]="loading">Register</button>
+    <p class="form-success" *ngIf="successMessage">{{ successMessage }}</p>
+    <p class="form-error" *ngIf="errorMessage">{{ errorMessage }}</p>
   </form>
-</div>
+</section>

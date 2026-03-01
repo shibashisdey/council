@@ -22,4 +22,6 @@ public class CounselorAppointmentResponse {
     private LocalTime endTime;
 
     private AppointmentStatus status;
+
+    private String meetingLink;
 }

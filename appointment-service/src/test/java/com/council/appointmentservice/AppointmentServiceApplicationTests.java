@@ -1,4 +1,4 @@
-package com.stackroute.appointmentservice;
+package com.council.appointmentservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

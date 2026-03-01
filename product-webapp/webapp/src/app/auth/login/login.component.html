@@ -1,14 +1,15 @@
-<div>
-  <h2>Login</h2>
-  <form (ngSubmit)="login()">
-    <div>
-      <label for="identifier">Email or phone:</label>
+<section class="auth-card">
+  <h2 class="auth-title">Welcome back</h2>
+  <form class="form-grid" (ngSubmit)="login()">
+    <div class="form-field">
+      <label for="identifier">Email or phone</label>
       <input type="text" id="identifier" [(ngModel)]="credentials.identifier" name="identifier" required>
     </div>
-    <div>
-      <label for="password">Password:</label>
+    <div class="form-field">
+      <label for="password">Password</label>
       <input type="password" id="password" [(ngModel)]="credentials.password" name="password" required>
     </div>
-    <button type="submit">Login</button>
+    <button type="submit" [disabled]="loading">Login</button>
+    <p class="form-error" *ngIf="errorMessage">{{ errorMessage }}</p>
   </form>
-</div>
+</section>

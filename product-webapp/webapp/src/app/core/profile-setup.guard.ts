@@ -28,7 +28,12 @@ export class ProfileSetupGuard implements CanActivate {
     if (user.role === 'CLIENT') {
       return this.userService.getMe().pipe(
         map(profile => {
-          if (profile && profile.fullName) {
+          const hasAge = profile?.age !== null && profile?.age !== undefined;
+          const isComplete = !!(profile
+            && profile.fullName
+            && profile.gender
+            && hasAge);
+          if (isComplete) {
             return this.router.createUrlTree(['/dashboard']);
           }
           return true;
@@ -39,7 +44,10 @@ export class ProfileSetupGuard implements CanActivate {
 
     return this.counselorService.getMe().pipe(
       map(profile => {
-        if (profile && profile.fullName) {
+        const isComplete = !!(profile
+          && profile.fullName
+          && profile.qualification);
+        if (isComplete) {
           if (!this.setupState.isScheduleComplete(user.userId)) {
             return this.router.createUrlTree(['/setup/schedule']);
           }

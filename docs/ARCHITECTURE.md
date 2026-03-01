@@ -11,9 +11,10 @@ This document explains the current system architecture, data flows, and service 
 5. `counselor-service` — therapist profile
 6. `availability-service` — scheduling rules and slot blocking
 7. `appointment-service` — booking orchestration
-8. `payment-service` — payment state and confirmation
-9. `review-service` — session notes + reviews
-10. `notification-service` — PDF upload to R2 and email trigger (placeholder)
+8. `link-gererator-service` — generates and stores Jitsi meeting links
+9. `payment-service` — payment state and confirmation
+10. `review-service` — session notes + reviews
+11. `notification-service` — PDF upload to R2 and email trigger (placeholder)
 
 **Diagrams**
 
@@ -26,6 +27,7 @@ flowchart LR
   Gateway --> CounselorSvc[Counselor Service]
   Gateway --> ApptSvc[Appointment Service]
   ApptSvc --> AvailSvc[Availability Service]
+  ApptSvc --> LinkSvc[Link Gererator Service]
   Gateway --> ReviewSvc[Review Service]
   ReviewSvc --> NotifSvc[Notification Service]
   NotifSvc --> R2[Cloudflare R2]
@@ -36,6 +38,7 @@ flowchart LR
   Eureka --- CounselorSvc
   Eureka --- ApptSvc
   Eureka --- AvailSvc
+  Eureka --- LinkSvc
   Eureka --- ReviewSvc
   Eureka --- NotifSvc
   Eureka --- PaymentSvc
@@ -70,6 +73,7 @@ sequenceDiagram
   participant C as Client
   participant G as API Gateway
   participant A as Appointment Service
+  participant L as Link Gererator Service
   participant V as Availability Service
   C->>G: POST /appointments (JWT)
   G->>A: create appointment
@@ -94,6 +98,7 @@ sequenceDiagram
   P-->>C: payment initiated
   C->>P: POST /payments/{id}/confirm
   P->>A: confirmAppointment
+  A->>L: createOrGetMeetingLink
   A->>V: updateBlockReason(APPOINTMENT_CONFIRMED)
   V-->>A: ok
   A-->>P: ok
@@ -194,6 +199,18 @@ erDiagram
     datetime slotLockedAt
   }
 
+  MEETING_LINK {
+    bigint id PK
+    bigint appointmentId
+    bigint clientId
+    bigint counselorId
+    date appointmentDate
+    time startTime
+    time endTime
+    string roomName
+    string meetingLink
+  }
+
   PAYMENT {
     bigint id PK
     bigint appointmentId
@@ -235,6 +252,7 @@ erDiagram
   APPOINTMENT ||--|| PAYMENT : "appointmentId"
   APPOINTMENT ||--|| SESSION_NOTE : "appointmentId"
   APPOINTMENT ||--|| REVIEW : "appointmentId"
+  APPOINTMENT ||--|| MEETING_LINK : "appointmentId"
 ```
 
 **Core Data Domains**
@@ -271,6 +289,12 @@ erDiagram
 **Payments**
 1. `payments`
    - `id`, `appointmentId`, `amount`, `status`, `gatewayPaymentId`
+
+**Meeting Links**
+1. `meeting_links`
+   - `appointmentId`, `clientId`, `counselorId`
+   - `appointmentDate`, `startTime`, `endTime`
+   - `roomName`, `meetingLink`
 
 **Session Notes**
 1. `session_notes`
@@ -328,6 +352,12 @@ erDiagram
 2. `POST /payments/{appointmentId}/confirm`
 3. `POST /payments/{appointmentId}/fail`
 
+**Link Gererator Service (Internal)**
+1. `POST /internal/meeting-links`
+2. `GET /internal/meeting-links/{appointmentId}`
+3. `PUT /internal/meeting-links/{appointmentId}`
+4. `DELETE /internal/meeting-links/{appointmentId}`
+
 **Review Service**
 1. `POST /session-notes`
 2. `PUT /session-notes/{id}`
@@ -359,7 +389,8 @@ erDiagram
 **3) Payment**
 1. Payment created (INITIATED)
 2. Payment confirmed → appointment confirmed
-3. Availability block updated to `APPOINTMENT_CONFIRMED`
+3. Link gererator creates meeting link for confirmed appointment
+4. Availability block updated to `APPOINTMENT_CONFIRMED`
 
 **4) Session Notes**
 1. Counselor creates note after appointment confirmed/completed

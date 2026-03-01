@@ -2,7 +2,11 @@ package com.council.appointmentservice.service;
 
 import com.council.appointmentservice.client.AvailabilityClient;
 import com.council.appointmentservice.client.CounselorClient;
+import com.council.appointmentservice.client.LinkGeneratorClient;
 import com.council.appointmentservice.dto.BlockSlotRequest;
+import com.council.appointmentservice.dto.MeetingLinkRequest;
+import com.council.appointmentservice.dto.MeetingLinkResponse;
+import com.council.appointmentservice.dto.MeetingLinkUpdateRequest;
 import com.council.appointmentservice.dto.request.CreateAppointmentRequest;
 import com.council.appointmentservice.dto.request.RescheduleAppointmentRequest;
 import com.council.appointmentservice.dto.response.AppointmentInternalResponse;
@@ -12,11 +16,15 @@ import com.council.appointmentservice.dto.response.CounselorAppointmentResponse;
 import com.council.appointmentservice.model.Appointment;
 import com.council.appointmentservice.model.AppointmentStatus;
 import com.council.appointmentservice.repository.AppointmentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import static com.council.appointmentservice.dto.BlockSlotRequest.UnavailabilityReason.APPOINTMENT_CONFIRMED;
@@ -27,19 +35,24 @@ import static com.council.appointmentservice.model.AppointmentStatus.*;
 public class AppointmentServiceImpl implements AppointmentService {
 
     private static final int SLOT_DURATION_HOURS = 1;
+    private static final int BOOKING_WINDOW_DAYS = 45;
+    private static final Logger log = LoggerFactory.getLogger(AppointmentServiceImpl.class);
 
     private final AppointmentRepository appointmentRepository;
     private final AvailabilityClient availabilityClient;
     private final CounselorClient counselorClient;
+    private final LinkGeneratorClient linkGeneratorClient;
 
     public AppointmentServiceImpl(
             AppointmentRepository appointmentRepository,
             AvailabilityClient availabilityClient,
-            CounselorClient counselorClient
+            CounselorClient counselorClient,
+            LinkGeneratorClient linkGeneratorClient
     ) {
         this.appointmentRepository = appointmentRepository;
         this.availabilityClient = availabilityClient;
         this.counselorClient = counselorClient;
+        this.linkGeneratorClient = linkGeneratorClient;
     }
 
     /**
@@ -51,6 +64,13 @@ public class AppointmentServiceImpl implements AppointmentService {
             Long clientId,
             CreateAppointmentRequest request
     ) {
+        if (request.getAppointmentDate() == null) {
+            throw new IllegalArgumentException("Appointment date is required");
+        }
+        LocalDate maxDate = LocalDate.now().plusDays(BOOKING_WINDOW_DAYS);
+        if (request.getAppointmentDate().isAfter(maxDate)) {
+            throw new IllegalStateException("Appointments can only be booked up to 45 days in advance");
+        }
 
         // 1️⃣ Check if client is already busy at this time
         boolean clientBusy =
@@ -113,6 +133,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         return appointmentRepository.findByClientId(clientId)
                 .stream()
                 .map(this::mapToResponse)
+                .map(this::attachMeetingLinkIfAvailable)
                 .toList();
     }
 
@@ -124,6 +145,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         return appointmentRepository.findByCounselorId(counselorId)
                 .stream()
                 .map(this::mapToCounselorResponse)
+                .map(this::attachMeetingLinkIfAvailable)
                 .toList();
     }
 
@@ -137,6 +159,13 @@ public class AppointmentServiceImpl implements AppointmentService {
             Long clientId,
             RescheduleAppointmentRequest request
     ) {
+        if (request.getNewDate() == null) {
+            throw new IllegalArgumentException("New appointment date is required");
+        }
+        LocalDate maxDate = LocalDate.now().plusDays(BOOKING_WINDOW_DAYS);
+        if (request.getNewDate().isAfter(maxDate)) {
+            throw new IllegalStateException("Appointments can only be booked up to 45 days in advance");
+        }
 
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
@@ -155,7 +184,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         if (appointment.getAppointmentDate().equals(request.getNewDate())
                 && appointment.getStartTime().equals(request.getNewStartTime())) {
-            return mapToResponse(appointment);
+            return attachMeetingLinkIfAvailable(mapToResponse(appointment));
         }
 
         // 1. Check new slot availability
@@ -245,7 +274,11 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw saveError;
         }
 
-        return mapToResponse(updated);
+        if (updated.getStatus() == CONFIRMED) {
+            updateMeetingLink(updated);
+        }
+
+        return attachMeetingLinkIfAvailable(mapToResponse(updated));
     }
 
     /**
@@ -293,6 +326,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             appointmentRepository.save(appointment);
         }
 
+        deleteMeetingLink(appointment.getId());
+
         // Free the slot in availability service (idempotent)
         callAvailabilityFree(appointment.getId());
     }
@@ -308,7 +343,8 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         if (appointment.getStatus() == CONFIRMED) {
             callAvailabilityUpdateReason(appointment.getId(), APPOINTMENT_CONFIRMED);
-            return mapToResponse(appointment);
+            ensureMeetingLink(appointment);
+            return attachMeetingLinkIfAvailable(mapToResponse(appointment));
         }
 
         if (appointment.getStatus() != PENDING_PAYMENT) {
@@ -320,7 +356,8 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         callAvailabilityUpdateReason(updated.getId(), APPOINTMENT_CONFIRMED);
 
-        return mapToResponse(updated);
+        ensureMeetingLink(updated);
+        return attachMeetingLinkIfAvailable(mapToResponse(updated));
     }
 
     @Override
@@ -366,7 +403,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         appointment.setStatus(COMPLETED);
         Appointment updated = appointmentRepository.save(appointment);
-        return mapToResponse(updated);
+        return attachMeetingLinkIfAvailable(mapToResponse(updated));
     }
 
     private void callAvailabilityBlock(BlockSlotRequest request) {
@@ -428,5 +465,124 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .endTime(a.getEndTime())
                 .status(a.getStatus())
                 .build();
+    }
+
+    private AppointmentResponse attachMeetingLinkIfAvailable(AppointmentResponse response) {
+        if (!shouldExposeMeetingLink(
+                response.getStatus(),
+                response.getAppointmentDate(),
+                response.getEndTime()
+        )) {
+            return response;
+        }
+
+        String link = getMeetingLinkSafely(response.getAppointmentId());
+        if (link == null) {
+            return response;
+        }
+
+        return AppointmentResponse.builder()
+                .appointmentId(response.getAppointmentId())
+                .clientId(response.getClientId())
+                .clientName(response.getClientName())
+                .counselorId(response.getCounselorId())
+                .counselorName(response.getCounselorName())
+                .appointmentDate(response.getAppointmentDate())
+                .startTime(response.getStartTime())
+                .endTime(response.getEndTime())
+                .status(response.getStatus())
+                .paymentId(response.getPaymentId())
+                .createdAt(response.getCreatedAt())
+                .meetingLink(link)
+                .build();
+    }
+
+    private CounselorAppointmentResponse attachMeetingLinkIfAvailable(CounselorAppointmentResponse response) {
+        if (!shouldExposeMeetingLink(
+                response.getStatus(),
+                response.getAppointmentDate(),
+                response.getEndTime()
+        )) {
+            return response;
+        }
+
+        String link = getMeetingLinkSafely(response.getAppointmentId());
+        if (link == null) {
+            return response;
+        }
+
+        return CounselorAppointmentResponse.builder()
+                .appointmentId(response.getAppointmentId())
+                .clientId(response.getClientId())
+                .appointmentDate(response.getAppointmentDate())
+                .startTime(response.getStartTime())
+                .endTime(response.getEndTime())
+                .status(response.getStatus())
+                .meetingLink(link)
+                .build();
+    }
+
+    private boolean shouldExposeMeetingLink(
+            AppointmentStatus status,
+            LocalDate appointmentDate,
+            LocalTime endTime
+    ) {
+        if (status != CONFIRMED) {
+            return false;
+        }
+        if (appointmentDate == null || endTime == null) {
+            return false;
+        }
+        LocalDateTime appointmentEnd = LocalDateTime.of(appointmentDate, endTime);
+        return !appointmentEnd.isBefore(LocalDateTime.now());
+    }
+
+    private String getMeetingLinkSafely(Long appointmentId) {
+        try {
+            MeetingLinkResponse response = linkGeneratorClient.getByAppointmentId(appointmentId);
+            return response != null ? response.getMeetingLink() : null;
+        } catch (RuntimeException e) {
+            log.warn("Meeting link fetch failed for appointment {}", appointmentId, e);
+            return null;
+        }
+    }
+
+    private void ensureMeetingLink(Appointment appointment) {
+        try {
+            MeetingLinkRequest request = MeetingLinkRequest.builder()
+                    .appointmentId(appointment.getId())
+                    .clientId(appointment.getClientId())
+                    .counselorId(appointment.getCounselorId())
+                    .appointmentDate(appointment.getAppointmentDate())
+                    .startTime(appointment.getStartTime())
+                    .endTime(appointment.getEndTime())
+                    .build();
+            linkGeneratorClient.createOrGet(request);
+        } catch (RuntimeException e) {
+            log.warn("Meeting link generation failed for appointment {}", appointment.getId(), e);
+        }
+    }
+
+    private void updateMeetingLink(Appointment appointment) {
+        try {
+            MeetingLinkUpdateRequest request = MeetingLinkUpdateRequest.builder()
+                    .clientId(appointment.getClientId())
+                    .counselorId(appointment.getCounselorId())
+                    .appointmentDate(appointment.getAppointmentDate())
+                    .startTime(appointment.getStartTime())
+                    .endTime(appointment.getEndTime())
+                    .build();
+            linkGeneratorClient.updateMeetingLink(appointment.getId(), request);
+        } catch (RuntimeException e) {
+            log.warn("Meeting link update failed for appointment {}", appointment.getId(), e);
+        }
+    }
+
+    private void deleteMeetingLink(Long appointmentId) {
+        try {
+            linkGeneratorClient.deleteMeetingLink(appointmentId);
+        } catch (RuntimeException e) {
+            log.warn("Meeting link delete failed for appointment {}", appointmentId, e);
+        }
     }
 }

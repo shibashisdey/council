@@ -1,0 +1,28 @@
+<section class="appt-shell">
+  <div class="appt-header">
+    <div>
+      <h2>My Sessions</h2>
+      <p class="muted">Upcoming client appointments.</p>
+    </div>
+  </div>
+
+  <div class="form-error" *ngIf="message">{{ message }}</div>
+
+  <div class="appt-grid" *ngIf="sessions.length > 0">
+    <div class="card" *ngFor="let appt of sessions">
+      <div class="card-top">
+        <h3>#{{ appt.appointmentId }}</h3>
+        <span class="pill">{{ appt.status }}</span>
+      </div>
+      <p class="muted">{{ appt.appointmentDate }} · {{ appt.startTime }} - {{ appt.endTime }}</p>
+      <div class="muted" *ngIf="appt.meetingLink">
+        Meeting: <a [href]="appt.meetingLink" target="_blank" rel="noopener">Join session</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="sessions.length === 0 && !message">
+    <h3>No sessions yet</h3>
+    <p class="muted">When clients book, your sessions will appear here.</p>
+  </div>
+</section>
