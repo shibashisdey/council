@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { AvailabilityService, CounselorSchedule, UpcomingLeave, WorkingHours } from '../../services/availability.service';
+import { AvailabilityService, CounselorSchedule, LunchBreak, UpcomingLeave, WorkingHours } from '../../services/availability.service';
 import { CounselorProfile, CounselorService } from '../../services/counselor.service';
 
 @Component({
@@ -96,11 +96,18 @@ export class CounselorProfileComponent implements OnInit {
 
   private applySchedule(schedule: CounselorSchedule): void {
     const workingHours = schedule.workingHours || [];
-    const lunchEnabled = !!schedule.lunchBreak;
-    const lunchStart = schedule.lunchBreak ? this.toHour(schedule.lunchBreak.startTime) : 13;
+    const lunchByDay = new Map<string, LunchBreak>();
+    (schedule.lunchBreaks || []).forEach(lunch => {
+      if (lunch.dayOfWeek) {
+        lunchByDay.set(lunch.dayOfWeek, lunch);
+      }
+    });
 
     this.scheduleDays = this.days.map(day => {
       const existing = workingHours.find(entry => entry.dayOfWeek === day);
+      const lunch = lunchByDay.get(day) || schedule.lunchBreak || null;
+      const lunchEnabled = !!lunch;
+      const lunchStart = lunch ? this.toHour(lunch.startTime) : 13;
       if (existing) {
         return {
           day,
@@ -119,7 +126,7 @@ export class CounselorProfileComponent implements OnInit {
         startHour: 9,
         endHour: 17,
         lunchEnabled: false,
-        lunchStartHour: lunchStart
+        lunchStartHour: 13
       };
     });
 

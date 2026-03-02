@@ -11,5 +11,7 @@ public class CounselorScheduleResponse {
 
     private List<WorkingHoursResponse> workingHours;
 
+    private List<LunchBreakResponse> lunchBreaks;
+
     private LunchBreakResponse lunchBreak;
 }

@@ -46,6 +46,10 @@ public class PendingScheduleChangeScheduler {
                         pending.getCounselorId(),
                         pending.getDayOfWeek()
                 );
+                lunchBreakRepository.deleteByCounselorIdAndDayOfWeek(
+                        pending.getCounselorId(),
+                        pending.getDayOfWeek()
+                );
                 pending.setStatus(PendingScheduleChangeStatus.APPLIED);
                 pendingScheduleChangeRepository.save(pending);
                 continue;
@@ -64,11 +68,18 @@ public class PendingScheduleChangeScheduler {
             workingHoursRepository.save(workingHours);
 
             if (pending.getLunchStartTime() == null || pending.getLunchEndTime() == null) {
-                lunchBreakRepository.deleteByCounselorId(pending.getCounselorId());
+                lunchBreakRepository.deleteByCounselorIdAndDayOfWeek(
+                        pending.getCounselorId(),
+                        pending.getDayOfWeek()
+                );
             } else {
-                LunchBreak lunchBreak = lunchBreakRepository.findByCounselorId(pending.getCounselorId())
+                LunchBreak lunchBreak = lunchBreakRepository.findByCounselorIdAndDayOfWeek(
+                                pending.getCounselorId(),
+                                pending.getDayOfWeek()
+                        )
                         .orElse(new LunchBreak());
                 lunchBreak.setCounselorId(pending.getCounselorId());
+                lunchBreak.setDayOfWeek(pending.getDayOfWeek());
                 lunchBreak.setStartTime(pending.getLunchStartTime());
                 lunchBreak.setEndTime(pending.getLunchEndTime());
                 lunchBreakRepository.save(lunchBreak);

@@ -18,12 +18,14 @@ export interface WorkingHours {
 }
 
 export interface LunchBreak {
+  dayOfWeek?: string;
   startTime: string;
   endTime: string;
 }
 
 export interface CounselorSchedule {
   workingHours: WorkingHours[];
+  lunchBreaks?: LunchBreak[];
   lunchBreak?: LunchBreak | null;
 }
 

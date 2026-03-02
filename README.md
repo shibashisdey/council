@@ -67,7 +67,7 @@ StackFul Minds is a Spring Boot microservices system for therapy sessions. It in
 **Availability Service**
 Rules enforced:
 1. Working hours per counselor per weekday.
-2. Daily lunch break per counselor.
+2. Lunch break per counselor per weekday.
 3. Unavailability blocks for leave/appointments.
 4. Public holidays (Nager.Date sync).
 5. Daily cap: max 7 confirmed appointments.
@@ -178,4 +178,3 @@ Set in `notification-service/src/main/resources/application.properties`:
 1. Most internal calls currently use fixed `localhost` URLs, not Eureka load balancing.
 2. API Gateway must be running for client-facing routes.
 3. Internal endpoints (ex: `/internal/**`, `/payments/*/confirm`) require internal JWT auth.
-

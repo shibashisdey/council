@@ -4,10 +4,19 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.DayOfWeek;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "counselor_lunch_breaks")
+@Table(
+        name = "counselor_lunch_breaks",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_counselor_lunch_day",
+                        columnNames = {"counselor_id", "day_of_week"}
+                )
+        }
+)
 @Getter
 @Setter
 public class LunchBreak {
@@ -16,8 +25,12 @@ public class LunchBreak {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "counselor_id", nullable = false, unique = true)
+    @Column(name = "counselor_id", nullable = false)
     private Long counselorId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "day_of_week")
+    private DayOfWeek dayOfWeek;
 
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;

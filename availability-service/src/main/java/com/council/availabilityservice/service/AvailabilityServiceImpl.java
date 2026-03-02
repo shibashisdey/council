@@ -84,7 +84,10 @@ public class AvailabilityServiceImpl implements AvailabilityService {
             if (workingHours == null) {
                 return false;
             }
-            Optional<LunchBreak> lunchBreakOpt = lunchBreakRepository.findByCounselorId(counselorId);
+            Optional<LunchBreak> lunchBreakOpt = lunchBreakRepository.findByCounselorIdAndDayOfWeek(counselorId, dayOfWeek);
+            if (lunchBreakOpt.isEmpty()) {
+                lunchBreakOpt = lunchBreakRepository.findTopByCounselorIdAndDayOfWeekIsNull(counselorId);
+            }
             workingStart = workingHours.getStartTime();
             workingEnd = workingHours.getEndTime();
             if (lunchBreakOpt.isPresent()) {
