@@ -41,4 +41,16 @@ public interface CounselorUnavailabilityRepository
     List<CounselorUnavailability> findByReferenceId(Long referenceId);
 
     List<CounselorUnavailability> findByDateBefore(LocalDate cutoffDate);
+
+    List<CounselorUnavailability> findByCounselorIdAndDateGreaterThanEqualAndActiveTrueAndReasonIn(
+            Long counselorId,
+            LocalDate date,
+            List<UnavailabilityReason> reasons
+    );
+
+    List<CounselorUnavailability> findByCounselorIdAndDateGreaterThanEqualAndActiveTrueAndReasonOrderByDateAscStartTimeAsc(
+            Long counselorId,
+            LocalDate date,
+            UnavailabilityReason reason
+    );
 }

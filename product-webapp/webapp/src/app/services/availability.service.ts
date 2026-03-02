@@ -27,6 +27,21 @@ export interface CounselorSchedule {
   lunchBreak?: LunchBreak | null;
 }
 
+export interface SafeWorkingHoursUpdateResponse {
+  status: 'APPLIED_NOW' | 'SCHEDULED_FOR';
+  message: string;
+  effectiveFromDate: string;
+  conflictCount: number;
+}
+
+export interface UpcomingLeave {
+  id: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  reason: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -48,12 +63,24 @@ export class AvailabilityService {
     return this.http.post<void>(`${this.baseUrl}/working-hours/${counselorId}`, payload);
   }
 
+  setWorkingHoursSafe(counselorId: number, payload: any): Observable<SafeWorkingHoursUpdateResponse> {
+    return this.http.put<SafeWorkingHoursUpdateResponse>(`${this.baseUrl}/working-hours-safe/${counselorId}`, payload);
+  }
+
+  removeWorkingDaySafe(counselorId: number, dayOfWeek: string): Observable<SafeWorkingHoursUpdateResponse> {
+    return this.http.delete<SafeWorkingHoursUpdateResponse>(`${this.baseUrl}/working-hours-safe/${counselorId}/${dayOfWeek}`);
+  }
+
   setLunchBreak(counselorId: number, payload: any): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/lunch-break/${counselorId}`, payload);
   }
 
   addUnavailability(counselorId: number, payload: any): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/unavailability/${counselorId}`, payload);
+  }
+
+  getUpcomingLeaves(counselorId: number): Observable<UpcomingLeave[]> {
+    return this.http.get<UpcomingLeave[]>(`${this.baseUrl}/unavailability/${counselorId}/upcoming`);
   }
 
   cancelUnavailability(counselorId: number, unavailabilityId: number): Observable<void> {

@@ -18,4 +18,6 @@ public interface CounselorWorkingHoursRepository
             Long counselorId,
             DayOfWeek dayOfWeek
     );
+
+    void deleteByCounselorIdAndDayOfWeek(Long counselorId, DayOfWeek dayOfWeek);
 }

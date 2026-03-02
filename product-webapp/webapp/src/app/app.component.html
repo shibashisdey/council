@@ -5,7 +5,7 @@
       <span class="brand-name">Council</span>
     </div>
     <nav class="app-nav">
-      <a class="nav-pill" routerLink="/">Home</a>
+      <a class="nav-pill" routerLink="/" *ngIf="!authState.currentUser">Home</a>
       <a class="nav-pill" routerLink="/counselors" *ngIf="authState.currentUser">Counselors</a>
       <a class="nav-pill" routerLink="/appointments" *ngIf="authState.currentUser?.role === 'CLIENT'">Appointments</a>
       <a class="nav-pill" routerLink="/sessions" *ngIf="authState.currentUser?.role === 'THERAPIST'">Sessions</a>

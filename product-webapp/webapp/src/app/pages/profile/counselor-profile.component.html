@@ -7,176 +7,308 @@
   <div class="form-success" *ngIf="message">{{ message }}</div>
   <div class="form-error" *ngIf="error">{{ error }}</div>
 
-  <section class="auth-card" [class.collapsed]="activeSection !== 'profile'">
-    <button type="button" class="card-header" (click)="setActive('profile')">
-      <span>Profile Details</span>
-      <span class="muted">Edit profile</span>
+  <nav class="profile-subnav">
+    <button type="button" class="subnav-pill" [class.active]="activeSection === 'profile'" (click)="setActive('profile')">
+      Personal Details
     </button>
-    <div class="card-body" *ngIf="activeSection === 'profile'">
+    <button type="button" class="subnav-pill" [class.active]="activeSection === 'schedule'" (click)="setActive('schedule')">
+      Working Hours
+    </button>
+    <button type="button" class="subnav-pill" [class.active]="activeSection === 'leave'" (click)="setActive('leave')">
+      Adhoc Leaves
+    </button>
+  </nav>
+
+  <section class="auth-card" *ngIf="activeSection === 'profile'">
+    <div class="card-body">
+      <h3 class="section-title">Professional Profile</h3>
+      <p class="section-subtitle">Keep your core details updated so clients can discover and trust your profile.</p>
       <form class="form-grid" #profileForm="ngForm" (ngSubmit)="save()">
-        <div class="form-field">
-          <label>Full name</label>
-          <input
-            [(ngModel)]="form.fullName"
-            name="fullName"
-            required
-            minlength="2"
-            maxlength="80"
-            #fullName="ngModel"
-          />
-          <span class="form-error" *ngIf="fullName.invalid && (fullName.dirty || fullName.touched)">
-            Please enter your full name.
-          </span>
+        <div class="profile-layout">
+          <aside class="summary-card">
+            <div class="summary-avatar">{{ initials }}</div>
+            <h4 class="summary-name">{{ form.fullName || 'Counselor Name' }}</h4>
+            <p class="summary-meta">{{ form.experienceYears || 0 }} Years Experience</p>
+            <p class="summary-price">₹{{ form.pricePerSession || 0 }} / session</p>
+            <div class="summary-badge" [class.off]="!form.active">{{ form.active ? 'Active' : 'Inactive' }}</div>
+            <div class="summary-tags">
+              <span class="summary-tag" *ngFor="let tag of specializationTags">{{ tag }}</span>
+              <span class="summary-tag muted-tag" *ngIf="specializationTags.length === 0">No specializations yet</span>
+            </div>
+          </aside>
+
+          <div class="view-card" *ngIf="!personalEditMode">
+            <div class="view-grid">
+              <div class="view-item">
+                <span class="view-label">Full Name</span>
+                <span class="view-value">{{ form.fullName || 'Not set' }}</span>
+              </div>
+              <div class="view-item">
+                <span class="view-label">Qualification</span>
+                <span class="view-value">{{ form.qualification || 'Not set' }}</span>
+              </div>
+              <div class="view-item">
+                <span class="view-label">Experience</span>
+                <span class="view-value">{{ form.experienceYears || 0 }} years</span>
+              </div>
+              <div class="view-item">
+                <span class="view-label">Price</span>
+                <span class="view-value">₹{{ form.pricePerSession || 0 }} / session</span>
+              </div>
+              <div class="view-item view-full">
+                <span class="view-label">Bio</span>
+                <span class="view-value">{{ form.bio || 'No bio added yet.' }}</span>
+              </div>
+            </div>
+            <div class="view-actions">
+              <button type="button" class="btn-primary" (click)="setPersonalEditMode(true)">Edit</button>
+            </div>
+          </div>
+
+          <div class="editor-card" *ngIf="personalEditMode">
+            <section class="form-section">
+              <h4>Basic Info</h4>
+              <div class="profile-grid">
+                <div class="form-field">
+                  <label>Full name</label>
+                  <input
+                    [(ngModel)]="form.fullName"
+                    name="fullName"
+                    required
+                    minlength="2"
+                    maxlength="80"
+                    #fullName="ngModel"
+                  />
+                  <span class="form-error" *ngIf="fullName.invalid && (fullName.dirty || fullName.touched)">
+                    Please enter your full name.
+                  </span>
+                </div>
+                <div class="form-field">
+                  <label>Qualification</label>
+                  <input
+                    [(ngModel)]="form.qualification"
+                    name="qualification"
+                    required
+                    minlength="2"
+                    maxlength="120"
+                    #qualification="ngModel"
+                  />
+                  <span class="form-error" *ngIf="qualification.invalid && (qualification.dirty || qualification.touched)">
+                    Please enter your qualification.
+                  </span>
+                </div>
+                <div class="form-field">
+                  <label>Experience years</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="form.experienceYears"
+                    name="experienceYears"
+                    min="0"
+                    max="60"
+                    #experienceYears="ngModel"
+                  />
+                  <span class="form-error" *ngIf="experienceYears.invalid && (experienceYears.dirty || experienceYears.touched)">
+                    Enter a value between 0 and 60.
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section class="form-section">
+              <h4>Pricing</h4>
+              <div class="profile-grid">
+                <div class="form-field">
+                  <label>Price per session</label>
+                  <input
+                    type="number"
+                    [(ngModel)]="form.pricePerSession"
+                    name="pricePerSession"
+                    min="0"
+                    max="100000"
+                    #pricePerSession="ngModel"
+                  />
+                  <span class="form-error" *ngIf="pricePerSession.invalid && (pricePerSession.dirty || pricePerSession.touched)">
+                    Enter a valid price.
+                  </span>
+                </div>
+                <div class="form-field">
+                  <label>Profile Active</label>
+                  <label class="switch">
+                    <input type="checkbox" [(ngModel)]="form.active" name="active" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section class="form-section">
+              <h4>Specializations</h4>
+              <div class="tag-input-wrap">
+                <span class="tag-pill" *ngFor="let tag of specializationTags">
+                  {{ tag }}
+                  <button type="button" (click)="removeSpecialization(tag)">×</button>
+                </span>
+                <input
+                  class="tag-input"
+                  [(ngModel)]="specializationInput"
+                  [ngModelOptions]="{standalone: true}"
+                  (keydown)="onSpecializationKeydown($event)"
+                  (blur)="addSpecialization(specializationInput)"
+                  placeholder="Type and press Enter"
+                />
+              </div>
+            </section>
+
+            <section class="form-section">
+              <h4>Bio</h4>
+              <div class="form-field form-full">
+                <textarea
+                  [(ngModel)]="form.bio"
+                  name="bio"
+                  rows="4"
+                  maxlength="600"
+                  #bio="ngModel"
+                ></textarea>
+                <span class="form-help">{{ bioCount }}/600</span>
+              </div>
+            </section>
+          </div>
         </div>
-        <div class="form-field">
-          <label>Qualification</label>
-          <input
-            [(ngModel)]="form.qualification"
-            name="qualification"
-            required
-            minlength="2"
-            maxlength="120"
-            #qualification="ngModel"
-          />
-          <span class="form-error" *ngIf="qualification.invalid && (qualification.dirty || qualification.touched)">
-            Please enter your qualification.
-          </span>
+        <div class="section-actions" *ngIf="personalEditMode">
+          <button type="button" class="btn-ghost" (click)="setPersonalEditMode(false)">Cancel</button>
+          <button type="submit" [disabled]="loading || profileForm.invalid">Save changes</button>
         </div>
-        <div class="form-field">
-          <label>Experience years</label>
-          <input
-            type="number"
-            [(ngModel)]="form.experienceYears"
-            name="experienceYears"
-            min="0"
-            max="60"
-            #experienceYears="ngModel"
-          />
-          <span class="form-error" *ngIf="experienceYears.invalid && (experienceYears.dirty || experienceYears.touched)">
-            Enter a value between 0 and 60.
-          </span>
-        </div>
-        <div class="form-field">
-          <label>Bio</label>
-          <textarea
-            [(ngModel)]="form.bio"
-            name="bio"
-            rows="4"
-            maxlength="600"
-            #bio="ngModel"
-          ></textarea>
-          <span class="form-help">{{ form.bio?.length || 0 }}/600</span>
-        </div>
-        <div class="form-field">
-          <label>Price per session</label>
-          <input
-            type="number"
-            [(ngModel)]="form.pricePerSession"
-            name="pricePerSession"
-            min="0"
-            max="100000"
-            #pricePerSession="ngModel"
-          />
-          <span class="form-error" *ngIf="pricePerSession.invalid && (pricePerSession.dirty || pricePerSession.touched)">
-            Enter a valid price.
-          </span>
-        </div>
-        <div class="form-field">
-          <label>Specializations</label>
-          <input
-            [(ngModel)]="form.specializations"
-            name="specializations"
-            maxlength="200"
-            placeholder="Anxiety, Career, Relationships"
-          />
-          <span class="form-help">Separate with commas.</span>
-        </div>
-        <div class="form-field">
-          <label>Profile active</label>
-          <select [(ngModel)]="form.active" name="active">
-            <option [ngValue]="true">Active</option>
-            <option [ngValue]="false">Inactive</option>
-          </select>
-        </div>
-        <button type="submit" [disabled]="loading || profileForm.invalid">Save changes</button>
       </form>
     </div>
   </section>
 
-  <section class="auth-card" [class.collapsed]="activeSection !== 'schedule'">
-    <button type="button" class="card-header" (click)="setActive('schedule')">
-      <span>Weekly Schedule</span>
-      <span class="muted">Set working hours</span>
-    </button>
-    <div class="card-body" *ngIf="activeSection === 'schedule'">
-      <p class="muted">Select up to 5 working days. Max 8 working hours including a 1-hour lunch break.</p>
+  <section class="auth-card" *ngIf="activeSection === 'schedule'">
+    <div class="card-body">
+      <h3 class="hours-title">Set Your Weekly Working Hours</h3>
+      <p class="muted hours-subtitle">Select up to 6 working days. Max 8 working hours including a 1-hour lunch break.</p>
       <div class="form-success" *ngIf="scheduleMessage">{{ scheduleMessage }}</div>
       <div class="form-error" *ngIf="scheduleError">{{ scheduleError }}</div>
       <div class="form-help" *ngIf="scheduleNotice">{{ scheduleNotice }}</div>
 
-      <div class="schedule-grid">
-        <div class="schedule-row" *ngFor="let day of scheduleDays">
-          <button type="button" class="day-pill" [class.active]="day.enabled" (click)="toggleDay(day.day)">
-            {{ day.day | titlecase }}
-          </button>
-          <div class="range-group" [class.disabled]="!day.enabled">
-            <div class="dropdown-row">
-              <div class="dropdown-field">
-                <label>Start</label>
-                <select [(ngModel)]="day.startHour" [ngModelOptions]="{standalone: true}" [disabled]="!day.enabled">
-                  <option *ngFor="let hour of hourOptions" [ngValue]="hour">{{ formatHour(hour) }}</option>
+      <div class="days-grid">
+        <button
+          type="button"
+          class="day-card"
+          *ngFor="let day of scheduleDays"
+          [class.active]="selectedDay === day.day"
+          (click)="toggleDay(day.day)"
+        >
+          <span class="day-check" *ngIf="day.enabled">✓</span>
+          <span class="day-name">{{ day.day | titlecase }}</span>
+          <span class="day-time">{{ dayRangeText(day) }}</span>
+        </button>
+      </div>
+
+      <div class="hours-panel" [class.open]="!!selectedDay">
+        <div class="hours-panel-inner" *ngIf="selectedDayConfig as dayConfig">
+          <div class="time-columns">
+            <div class="time-column">
+              <label class="time-label">Work Time</label>
+              <div class="time-row">
+                <select [(ngModel)]="dayConfig.startHour" [ngModelOptions]="{standalone: true}" (ngModelChange)="onTimeChanged()">
+                  <option *ngFor="let hour of hourOptions" [ngValue]="hour">{{ formatHourLabel(hour) }}</option>
                 </select>
-              </div>
-              <div class="dropdown-field">
-                <label>End</label>
-                <select [(ngModel)]="day.endHour" [ngModelOptions]="{standalone: true}" [disabled]="!day.enabled">
-                  <option *ngFor="let hour of endHourOptions" [ngValue]="hour">{{ formatHour(hour) }}</option>
+                <span class="time-sep">→</span>
+                <select [(ngModel)]="dayConfig.endHour" [ngModelOptions]="{standalone: true}" (ngModelChange)="onTimeChanged()">
+                  <option
+                    *ngFor="let hour of hourOptions"
+                    [ngValue]="hour"
+                    [disabled]="hour <= dayConfig.startHour || hour > dayConfig.startHour + 8"
+                  >
+                    {{ formatHourLabel(hour) }}
+                  </option>
                 </select>
-              </div>
-              <div class="dropdown-field">
-                <label>Lunch</label>
-                <select [(ngModel)]="day.lunchStartHour" [ngModelOptions]="{standalone: true}" [disabled]="!day.enabled">
-                  <option *ngFor="let hour of hourOptions" [ngValue]="hour">{{ formatHour(hour) }}</option>
-                </select>
-                <span class="form-help">1 hour</span>
               </div>
             </div>
-            <div class="range-labels">
-              <span>Work: {{ formatHour(day.startHour) }} - {{ formatHour(day.endHour) }}</span>
-              <span>Lunch: {{ formatHour(day.lunchStartHour) }} - {{ addHour(day.lunchStartHour) }}</span>
+            <div class="time-column">
+              <div class="time-label-row">
+                <label class="time-label">Lunch Break (Optional)</label>
+                <label class="switch switch-small">
+                  <input type="checkbox" [checked]="dayConfig.lunchEnabled" (change)="toggleLunchBreak($any($event.target).checked)" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="time-row" *ngIf="dayConfig.lunchEnabled">
+                <select [(ngModel)]="dayConfig.lunchStartHour" [ngModelOptions]="{standalone: true}" (ngModelChange)="onTimeChanged()">
+                  <option *ngFor="let hour of hourOptions" [ngValue]="hour">{{ formatHourLabel(hour) }}</option>
+                </select>
+                <span class="time-sep">→</span>
+                <input [value]="formatHourLabel(dayConfig.lunchStartHour + 1)" disabled />
+              </div>
+              <p class="form-help" *ngIf="!dayConfig.lunchEnabled">No lunch break for this day.</p>
             </div>
+          </div>
+          <p class="hours-summary">
+            You will work {{ effectiveHours(dayConfig) }} hours ({{ totalHours(dayConfig) }} hour span{{ dayConfig.lunchEnabled ? ', 1 hour lunch included' : '' }}).
+          </p>
+          <div class="hours-actions">
+            <button
+              type="button"
+              class="btn-ghost"
+              *ngIf="dayConfig.persisted"
+              (click)="removeSelectedDay()"
+              [disabled]="scheduleLoading"
+            >
+              Remove Day
+            </button>
+            <button type="button" (click)="saveSchedule()" [disabled]="scheduleLoading">Save Day Hours</button>
           </div>
         </div>
       </div>
-
-      <button type="button" (click)="saveSchedule()" [disabled]="scheduleLoading">Save Schedule</button>
     </div>
   </section>
 
-  <section class="auth-card" [class.collapsed]="activeSection !== 'leave'">
-    <button type="button" class="card-header" (click)="setActive('leave')">
-      <span>Request Leave</span>
-      <span class="muted">Block time off</span>
-    </button>
-    <div class="card-body" *ngIf="activeSection === 'leave'">
-      <p class="muted">Request time off when no appointments are booked.</p>
-      <div class="form-grid">
-        <div class="form-field">
-          <label>Date</label>
-          <input type="date" [(ngModel)]="leaveForm.date" />
-        </div>
-        <div class="form-field">
-          <label>Start time</label>
-          <input type="time" [(ngModel)]="leaveForm.startTime" />
-        </div>
-        <div class="form-field">
-          <label>End time</label>
-          <input type="time" [(ngModel)]="leaveForm.endTime" />
+  <section class="auth-card" *ngIf="activeSection === 'leave'">
+    <div class="card-body">
+      <h3 class="section-title">Block Time Off</h3>
+      <p class="section-subtitle">Use this when you need short leave windows. Requests should not overlap active bookings.</p>
+      <div class="leave-panel">
+        <div class="form-grid leave-grid">
+          <div class="form-field">
+            <label>Date</label>
+            <input type="date" [(ngModel)]="leaveForm.date" />
+          </div>
+          <div class="form-field">
+            <label>Start time</label>
+            <input type="time" [(ngModel)]="leaveForm.startTime" />
+          </div>
+          <div class="form-field">
+            <label>End time</label>
+            <input type="time" [(ngModel)]="leaveForm.endTime" />
+          </div>
+          <div class="leave-summary">
+            Blocking from <strong>{{ leaveForm.startTime || '--:--' }}</strong> to <strong>{{ leaveForm.endTime || '--:--' }}</strong> on
+            <strong>{{ leaveForm.date || 'selected date' }}</strong>
+          </div>
         </div>
       </div>
-      <button type="button" class="btn-ghost" (click)="requestLeave()" [disabled]="scheduleLoading">
-        Submit Leave Request
-      </button>
+      <div class="section-actions">
+        <button type="button" class="btn-ghost" (click)="requestLeave()" [disabled]="scheduleLoading">
+          Submit Leave Request
+        </button>
+      </div>
+
+      <div class="upcoming-leaves">
+        <h4>Upcoming Leaves</h4>
+        <p class="muted" *ngIf="leavesLoading">Loading upcoming leaves...</p>
+        <p class="muted" *ngIf="!leavesLoading && leaves.length === 0">No upcoming leaves found.</p>
+        <div class="leave-list" *ngIf="!leavesLoading && leaves.length > 0">
+          <div class="leave-item" *ngFor="let leave of leaves">
+            <div class="leave-item-info">
+              <strong>{{ leave.date | date:'mediumDate' }}</strong>
+              <span>{{ leave.startTime | slice:0:5 }} - {{ leave.endTime | slice:0:5 }}</span>
+            </div>
+            <button type="button" class="btn-ghost" (click)="deleteLeave(leave.id)" [disabled]="scheduleLoading">
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </section>

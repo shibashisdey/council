@@ -3,10 +3,12 @@ package com.council.availabilityservice.service;
 import com.council.availabilityservice.model.CounselorUnavailability;
 import com.council.availabilityservice.model.CounselorWorkingHours;
 import com.council.availabilityservice.model.LunchBreak;
+import com.council.availabilityservice.model.PendingScheduleChangeStatus;
 import com.council.availabilityservice.model.UnavailabilityReason;
 import com.council.availabilityservice.repository.CounselorUnavailabilityRepository;
 import com.council.availabilityservice.repository.CounselorWorkingHoursRepository;
 import com.council.availabilityservice.repository.LunchBreakRepository;
+import com.council.availabilityservice.repository.PendingScheduleChangeRepository;
 import com.council.availabilityservice.repository.PublicHolidayRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,17 +27,20 @@ public class AvailabilityServiceImpl implements AvailabilityService {
     private final CounselorWorkingHoursRepository workingHoursRepository;
     private final LunchBreakRepository lunchBreakRepository;
     private final PublicHolidayRepository holidayRepository;
+    private final PendingScheduleChangeRepository pendingScheduleChangeRepository;
 
     public AvailabilityServiceImpl(
             CounselorUnavailabilityRepository unavailabilityRepository,
             CounselorWorkingHoursRepository workingHoursRepository,
             LunchBreakRepository lunchBreakRepository,
-            PublicHolidayRepository holidayRepository
+            PublicHolidayRepository holidayRepository,
+            PendingScheduleChangeRepository pendingScheduleChangeRepository
     ) {
         this.unavailabilityRepository = unavailabilityRepository;
         this.workingHoursRepository = workingHoursRepository;
         this.lunchBreakRepository = lunchBreakRepository;
         this.holidayRepository = holidayRepository;
+        this.pendingScheduleChangeRepository = pendingScheduleChangeRepository;
     }
 
     @Override
@@ -50,25 +55,53 @@ public class AvailabilityServiceImpl implements AvailabilityService {
         }
 
         DayOfWeek dayOfWeek = date.getDayOfWeek();
-        CounselorWorkingHours workingHours =
-                workingHoursRepository.findByCounselorIdAndDayOfWeek(counselorId, dayOfWeek)
-                        .orElse(null);
-        if (workingHours == null) {
-            return false;
-        }
+        var pendingOpt = pendingScheduleChangeRepository
+                .findTopByCounselorIdAndDayOfWeekAndStatusOrderByCreatedAtDesc(
+                        counselorId,
+                        dayOfWeek,
+                        PendingScheduleChangeStatus.PENDING
+                )
+                .filter(pending -> !date.isBefore(pending.getEffectiveFromDate()));
 
-        if (startTime.isBefore(workingHours.getStartTime())
-                || endTime.isAfter(workingHours.getEndTime())) {
-            return false;
-        }
+        LocalTime workingStart;
+        LocalTime workingEnd;
+        LocalTime lunchStart = null;
+        LocalTime lunchEnd = null;
 
-        Optional<LunchBreak> lunchBreakOpt = lunchBreakRepository.findByCounselorId(counselorId);
-        if (lunchBreakOpt.isPresent()) {
-            LunchBreak lunch = lunchBreakOpt.get();
-            if (lunch.getStartTime().isBefore(endTime)
-                    && lunch.getEndTime().isAfter(startTime)) {
+        if (pendingOpt.isPresent()) {
+            var pending = pendingOpt.get();
+            if (pending.isOffDay()) {
                 return false;
             }
+            workingStart = pending.getStartTime();
+            workingEnd = pending.getEndTime();
+            lunchStart = pending.getLunchStartTime();
+            lunchEnd = pending.getLunchEndTime();
+        } else {
+            CounselorWorkingHours workingHours =
+                    workingHoursRepository.findByCounselorIdAndDayOfWeek(counselorId, dayOfWeek)
+                            .orElse(null);
+            if (workingHours == null) {
+                return false;
+            }
+            Optional<LunchBreak> lunchBreakOpt = lunchBreakRepository.findByCounselorId(counselorId);
+            workingStart = workingHours.getStartTime();
+            workingEnd = workingHours.getEndTime();
+            if (lunchBreakOpt.isPresent()) {
+                lunchStart = lunchBreakOpt.get().getStartTime();
+                lunchEnd = lunchBreakOpt.get().getEndTime();
+            }
+        }
+
+        if (startTime.isBefore(workingStart)
+                || endTime.isAfter(workingEnd)) {
+            return false;
+        }
+
+        if (lunchStart != null && lunchEnd != null
+                && lunchStart.isBefore(endTime)
+                && lunchEnd.isAfter(startTime)) {
+            return false;
         }
 
         boolean overlapExists =

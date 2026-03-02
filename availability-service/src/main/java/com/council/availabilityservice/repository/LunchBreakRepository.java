@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface LunchBreakRepository extends JpaRepository<LunchBreak, Long> {
 
     Optional<LunchBreak> findByCounselorId(Long counselorId);
+
+    void deleteByCounselorId(Long counselorId);
 }

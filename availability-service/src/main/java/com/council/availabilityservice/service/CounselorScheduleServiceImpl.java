@@ -1,25 +1,35 @@
 package com.council.availabilityservice.service;
 
 import com.council.availabilityservice.dto.request.AddUnavailabilityRequest;
+import com.council.availabilityservice.dto.request.SafeWorkingHoursUpdateRequest;
 import com.council.availabilityservice.dto.request.SetLunchBreakRequest;
 import com.council.availabilityservice.dto.request.SetWorkingHoursRequest;
 import com.council.availabilityservice.dto.response.CounselorAvailabilityResponse;
 import com.council.availabilityservice.dto.response.CounselorScheduleResponse;
 import com.council.availabilityservice.dto.response.LunchBreakResponse;
+import com.council.availabilityservice.dto.response.SafeWorkingHoursUpdateResponse;
+import com.council.availabilityservice.dto.response.UpcomingLeaveResponse;
 import com.council.availabilityservice.dto.response.WorkingHoursResponse;
 import com.council.availabilityservice.model.CounselorUnavailability;
 import com.council.availabilityservice.model.CounselorWorkingHours;
 import com.council.availabilityservice.model.LunchBreak;
+import com.council.availabilityservice.model.PendingScheduleChange;
+import com.council.availabilityservice.model.PendingScheduleChangeStatus;
+import com.council.availabilityservice.model.UnavailabilityReason;
 import com.council.availabilityservice.repository.CounselorUnavailabilityRepository;
 import com.council.availabilityservice.repository.CounselorWorkingHoursRepository;
 import com.council.availabilityservice.repository.LunchBreakRepository;
+import com.council.availabilityservice.repository.PendingScheduleChangeRepository;
 import com.council.availabilityservice.repository.PublicHolidayRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,17 +41,20 @@ public class CounselorScheduleServiceImpl implements CounselorScheduleService {
     private final LunchBreakRepository lunchBreakRepository;
     private final CounselorUnavailabilityRepository unavailabilityRepository;
     private final PublicHolidayRepository holidayRepository;
+    private final PendingScheduleChangeRepository pendingScheduleChangeRepository;
 
     public CounselorScheduleServiceImpl(
             CounselorWorkingHoursRepository workingHoursRepository,
             LunchBreakRepository lunchBreakRepository,
             CounselorUnavailabilityRepository unavailabilityRepository,
-            PublicHolidayRepository holidayRepository
+            PublicHolidayRepository holidayRepository,
+            PendingScheduleChangeRepository pendingScheduleChangeRepository
     ) {
         this.workingHoursRepository = workingHoursRepository;
         this.lunchBreakRepository = lunchBreakRepository;
         this.unavailabilityRepository = unavailabilityRepository;
         this.holidayRepository = holidayRepository;
+        this.pendingScheduleChangeRepository = pendingScheduleChangeRepository;
     }
 
     @Override
@@ -100,17 +113,30 @@ public class CounselorScheduleServiceImpl implements CounselorScheduleService {
     }
 
     @Override
+    public List<UpcomingLeaveResponse> getUpcomingLeaves(Long counselorId) {
+        return unavailabilityRepository
+                .findByCounselorIdAndDateGreaterThanEqualAndActiveTrueAndReasonOrderByDateAscStartTimeAsc(
+                        counselorId,
+                        LocalDate.now(),
+                        UnavailabilityReason.COUNSELOR_LEAVE
+                )
+                .stream()
+                .map(leave -> UpcomingLeaveResponse.builder()
+                        .id(leave.getId())
+                        .date(leave.getDate())
+                        .startTime(leave.getStartTime())
+                        .endTime(leave.getEndTime())
+                        .reason(leave.getReason())
+                        .build())
+                .toList();
+    }
+
+    @Override
     public List<CounselorAvailabilityResponse> getAvailabilityForDate(Long counselorId, LocalDate date) {
         List<CounselorAvailabilityResponse> response = new ArrayList<>();
 
-        CounselorWorkingHours workingHours =
-                workingHoursRepository.findByCounselorIdAndDayOfWeek(
-                                counselorId,
-                                date.getDayOfWeek()
-                        )
-                        .orElse(null);
-
-        if (workingHours == null) {
+        ScheduleWindow window = resolveScheduleWindow(counselorId, date);
+        if (window == null) {
             return response;
         }
 
@@ -118,9 +144,9 @@ public class CounselorScheduleServiceImpl implements CounselorScheduleService {
         String holidayReason = holidayOpt.map(h -> h.getName()).orElse(null);
 
         List<TimeBlock> blocked = new ArrayList<>();
-        lunchBreakRepository.findByCounselorId(counselorId).ifPresent(lunch ->
-                blocked.add(new TimeBlock(lunch.getStartTime(), lunch.getEndTime(), "LUNCH_BREAK"))
-        );
+        if (window.lunchStart != null && window.lunchEnd != null) {
+            blocked.add(new TimeBlock(window.lunchStart, window.lunchEnd, "LUNCH_BREAK"));
+        }
 
         List<CounselorUnavailability> blocks =
                 unavailabilityRepository.findByCounselorIdAndDateAndActiveTrue(
@@ -135,8 +161,8 @@ public class CounselorScheduleServiceImpl implements CounselorScheduleService {
             ));
         }
 
-        LocalTime slotStart = workingHours.getStartTime();
-        while (!slotStart.plusHours(1).isAfter(workingHours.getEndTime())) {
+        LocalTime slotStart = window.startTime;
+        while (!slotStart.plusHours(1).isAfter(window.endTime)) {
             LocalTime slotEnd = slotStart.plusHours(1);
             if (holidayReason != null) {
                 response.add(buildBlock(date, slotStart, slotEnd, "UNAVAILABLE", holidayReason));
@@ -152,6 +178,109 @@ public class CounselorScheduleServiceImpl implements CounselorScheduleService {
         }
 
         return response;
+    }
+
+    @Override
+    public SafeWorkingHoursUpdateResponse updateWorkingHoursSafely(Long counselorId, SafeWorkingHoursUpdateRequest request) {
+        validateSafeUpdateRequest(request);
+
+        DayOfWeek dayOfWeek = request.getDayOfWeek();
+        LocalDate today = LocalDate.now();
+        List<CounselorUnavailability> appointmentBlocks = unavailabilityRepository
+                .findByCounselorIdAndDateGreaterThanEqualAndActiveTrueAndReasonIn(
+                        counselorId,
+                        today,
+                        List.of(UnavailabilityReason.APPOINTMENT_CONFIRMED, UnavailabilityReason.APPOINTMENT_HOLD)
+                );
+
+        List<CounselorUnavailability> conflicts = appointmentBlocks.stream()
+                .filter(block -> block.getDate().getDayOfWeek() == dayOfWeek)
+                .filter(block -> conflictsWithRequestedWindow(block, request))
+                .toList();
+
+        cancelPendingChange(counselorId, dayOfWeek);
+
+        if (conflicts.isEmpty()) {
+            applyWindowImmediately(counselorId, request);
+            return SafeWorkingHoursUpdateResponse.builder()
+                    .status("APPLIED_NOW")
+                    .message("Working hours updated immediately.")
+                    .effectiveFromDate(today)
+                    .conflictCount(0)
+                    .build();
+        }
+
+        LocalDate effectiveFromDate = conflicts.stream()
+                .map(CounselorUnavailability::getDate)
+                .max(Comparator.naturalOrder())
+                .orElse(today)
+                .plusDays(1);
+
+        PendingScheduleChange pending = new PendingScheduleChange();
+        pending.setCounselorId(counselorId);
+        pending.setDayOfWeek(dayOfWeek);
+        pending.setStartTime(request.getStartTime());
+        pending.setEndTime(request.getEndTime());
+        pending.setLunchStartTime(request.getLunchStartTime());
+        pending.setLunchEndTime(request.getLunchEndTime());
+        pending.setEffectiveFromDate(effectiveFromDate);
+        pending.setStatus(PendingScheduleChangeStatus.PENDING);
+        pendingScheduleChangeRepository.save(pending);
+
+        return SafeWorkingHoursUpdateResponse.builder()
+                .status("SCHEDULED_FOR")
+                .message("Schedule change is queued and will apply after existing appointments complete.")
+                .effectiveFromDate(effectiveFromDate)
+                .conflictCount(conflicts.size())
+                .build();
+    }
+
+    @Override
+    public SafeWorkingHoursUpdateResponse removeWorkingDaySafely(Long counselorId, DayOfWeek dayOfWeek) {
+        LocalDate today = LocalDate.now();
+        List<CounselorUnavailability> appointmentBlocks = unavailabilityRepository
+                .findByCounselorIdAndDateGreaterThanEqualAndActiveTrueAndReasonIn(
+                        counselorId,
+                        today,
+                        List.of(UnavailabilityReason.APPOINTMENT_CONFIRMED, UnavailabilityReason.APPOINTMENT_HOLD)
+                );
+
+        List<CounselorUnavailability> conflicts = appointmentBlocks.stream()
+                .filter(block -> block.getDate().getDayOfWeek() == dayOfWeek)
+                .toList();
+
+        cancelPendingChange(counselorId, dayOfWeek);
+
+        if (conflicts.isEmpty()) {
+            workingHoursRepository.deleteByCounselorIdAndDayOfWeek(counselorId, dayOfWeek);
+            return SafeWorkingHoursUpdateResponse.builder()
+                    .status("APPLIED_NOW")
+                    .message("Working day removed immediately.")
+                    .effectiveFromDate(today)
+                    .conflictCount(0)
+                    .build();
+        }
+
+        LocalDate effectiveFromDate = conflicts.stream()
+                .map(CounselorUnavailability::getDate)
+                .max(Comparator.naturalOrder())
+                .orElse(today)
+                .plusDays(1);
+
+        PendingScheduleChange pending = new PendingScheduleChange();
+        pending.setCounselorId(counselorId);
+        pending.setDayOfWeek(dayOfWeek);
+        pending.setOffDay(true);
+        pending.setEffectiveFromDate(effectiveFromDate);
+        pending.setStatus(PendingScheduleChangeStatus.PENDING);
+        pendingScheduleChangeRepository.save(pending);
+
+        return SafeWorkingHoursUpdateResponse.builder()
+                .status("SCHEDULED_FOR")
+                .message("Working day removal is queued and will apply after existing appointments complete.")
+                .effectiveFromDate(effectiveFromDate)
+                .conflictCount(conflicts.size())
+                .build();
     }
 
     @Override
@@ -176,6 +305,133 @@ public class CounselorScheduleServiceImpl implements CounselorScheduleService {
                 .workingHours(workingHours)
                 .lunchBreak(lunchBreak)
                 .build();
+    }
+
+    private void validateSafeUpdateRequest(SafeWorkingHoursUpdateRequest request) {
+        if (request.getDayOfWeek() == null || request.getStartTime() == null || request.getEndTime() == null) {
+            throw new IllegalArgumentException("Day and work hours are required.");
+        }
+        if (!request.getEndTime().isAfter(request.getStartTime())) {
+            throw new IllegalArgumentException("End time must be after start time.");
+        }
+        long workMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
+        if (workMinutes > 8 * 60) {
+            throw new IllegalArgumentException("Working hours cannot exceed 8 hours.");
+        }
+        boolean lunchStartProvided = request.getLunchStartTime() != null;
+        boolean lunchEndProvided = request.getLunchEndTime() != null;
+        if (lunchStartProvided != lunchEndProvided) {
+            throw new IllegalArgumentException("Lunch break start and end must both be provided or both be empty.");
+        }
+        if (!lunchStartProvided) {
+            return;
+        }
+        if (!request.getLunchEndTime().equals(request.getLunchStartTime().plusHours(1))) {
+            throw new IllegalArgumentException("Lunch break must be exactly 1 hour.");
+        }
+        boolean lunchInside = !request.getLunchStartTime().isBefore(request.getStartTime())
+                && !request.getLunchEndTime().isAfter(request.getEndTime());
+        if (!lunchInside) {
+            throw new IllegalArgumentException("Lunch break must be inside working hours.");
+        }
+    }
+
+    private boolean conflictsWithRequestedWindow(CounselorUnavailability block, SafeWorkingHoursUpdateRequest request) {
+        boolean outsideWork = block.getStartTime().isBefore(request.getStartTime())
+                || block.getEndTime().isAfter(request.getEndTime());
+        boolean overlapsLunch = request.getLunchStartTime() != null
+                && request.getLunchEndTime() != null
+                && block.getStartTime().isBefore(request.getLunchEndTime())
+                && block.getEndTime().isAfter(request.getLunchStartTime());
+        return outsideWork || overlapsLunch;
+    }
+
+    private void applyWindowImmediately(Long counselorId, SafeWorkingHoursUpdateRequest request) {
+        CounselorWorkingHours workingHours =
+                workingHoursRepository.findByCounselorIdAndDayOfWeek(counselorId, request.getDayOfWeek())
+                        .orElse(new CounselorWorkingHours());
+        workingHours.setCounselorId(counselorId);
+        workingHours.setDayOfWeek(request.getDayOfWeek());
+        workingHours.setStartTime(request.getStartTime());
+        workingHours.setEndTime(request.getEndTime());
+        workingHoursRepository.save(workingHours);
+
+        if (request.getLunchStartTime() == null || request.getLunchEndTime() == null) {
+            lunchBreakRepository.deleteByCounselorId(counselorId);
+            return;
+        }
+
+        LunchBreak lunchBreak = lunchBreakRepository.findByCounselorId(counselorId)
+                .orElse(new LunchBreak());
+        lunchBreak.setCounselorId(counselorId);
+        lunchBreak.setStartTime(request.getLunchStartTime());
+        lunchBreak.setEndTime(request.getLunchEndTime());
+        lunchBreakRepository.save(lunchBreak);
+    }
+
+    private void cancelPendingChange(Long counselorId, DayOfWeek dayOfWeek) {
+        pendingScheduleChangeRepository
+                .findTopByCounselorIdAndDayOfWeekAndStatusOrderByCreatedAtDesc(
+                        counselorId,
+                        dayOfWeek,
+                        PendingScheduleChangeStatus.PENDING
+                )
+                .ifPresent(existing -> {
+                    existing.setStatus(PendingScheduleChangeStatus.CANCELLED);
+                    pendingScheduleChangeRepository.save(existing);
+                });
+    }
+
+    private ScheduleWindow resolveScheduleWindow(Long counselorId, LocalDate date) {
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+        var pendingOpt = pendingScheduleChangeRepository
+                .findTopByCounselorIdAndDayOfWeekAndStatusOrderByCreatedAtDesc(
+                        counselorId,
+                        dayOfWeek,
+                        PendingScheduleChangeStatus.PENDING
+                )
+                .filter(pending -> !date.isBefore(pending.getEffectiveFromDate()));
+
+        if (pendingOpt.isPresent()) {
+            PendingScheduleChange pending = pendingOpt.get();
+            if (pending.isOffDay()) {
+                return null;
+            }
+            return new ScheduleWindow(
+                    pending.getStartTime(),
+                    pending.getEndTime(),
+                    pending.getLunchStartTime(),
+                    pending.getLunchEndTime()
+            );
+        }
+
+        CounselorWorkingHours workingHours =
+                workingHoursRepository.findByCounselorIdAndDayOfWeek(counselorId, dayOfWeek)
+                        .orElse(null);
+        if (workingHours == null) {
+            return null;
+        }
+        LunchBreak lunch = lunchBreakRepository.findByCounselorId(counselorId).orElse(null);
+        return new ScheduleWindow(
+                workingHours.getStartTime(),
+                workingHours.getEndTime(),
+                lunch != null ? lunch.getStartTime() : null,
+                lunch != null ? lunch.getEndTime() : null
+        );
+    }
+
+    private static class ScheduleWindow {
+        private final LocalTime startTime;
+        private final LocalTime endTime;
+        private final LocalTime lunchStart;
+        private final LocalTime lunchEnd;
+
+        private ScheduleWindow(LocalTime startTime, LocalTime endTime, LocalTime lunchStart, LocalTime lunchEnd) {
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.lunchStart = lunchStart;
+            this.lunchEnd = lunchEnd;
+        }
     }
 
     private String findOverlapReason(List<TimeBlock> blocks, LocalTime start, LocalTime end) {
