@@ -38,6 +38,22 @@ public interface AppointmentService {
             RescheduleAppointmentRequest request
     );
 
+    AppointmentResponse requestRescheduleByCounselor(
+            Long appointmentId,
+            Long counselorId,
+            RescheduleAppointmentRequest request
+    );
+
+    AppointmentResponse acceptRescheduleRequest(
+            Long appointmentId,
+            Long clientId
+    );
+
+    AppointmentResponse rejectRescheduleRequest(
+            Long appointmentId,
+            Long clientId
+    );
+
     /**
      * Cancel appointment (client or counselor)
      */

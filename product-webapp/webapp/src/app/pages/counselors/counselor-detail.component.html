@@ -33,7 +33,8 @@
             class="slot"
             type="button"
             *ngFor="let slot of slots"
-            [disabled]="slot.status !== 'AVAILABLE'"
+            [disabled]="isSlotDisabled(slot)"
+            [class.past]="isPastSlot(slot)"
             [class.selected]="selectedSlot?.startTime === slot.startTime"
             (click)="selectSlot(slot)">
             {{ formatTime(slot.startTime) }} - {{ formatTime(slot.endTime) }}

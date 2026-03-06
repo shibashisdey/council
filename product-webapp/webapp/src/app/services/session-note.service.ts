@@ -37,6 +37,10 @@ export class SessionNoteService {
     return this.http.patch<SessionNote>(`${this.baseUrl}/${noteId}/share`, payload);
   }
 
+  shareWithContent(payload: any): Observable<SessionNote> {
+    return this.http.post<SessionNote>(`${this.baseUrl}/share`, payload);
+  }
+
   getNotesForUser(userId: number): Observable<SessionNote[]> {
     return this.http.get<SessionNote[]>(`${this.baseUrl}/user/${userId}`);
   }

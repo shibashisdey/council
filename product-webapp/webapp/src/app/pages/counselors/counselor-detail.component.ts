@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CounselorProfile, CounselorService } from '../../services/counselor.service';
 import { AvailabilityBlock, AvailabilityService } from '../../services/availability.service';
 import { AppointmentService } from '../../services/appointment.service';
@@ -22,7 +22,8 @@ export class CounselorDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private counselorService: CounselorService,
     private availabilityService: AvailabilityService,
-    private appointmentService: AppointmentService
+    private appointmentService: AppointmentService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -55,7 +56,7 @@ export class CounselorDetailComponent implements OnInit {
   }
 
   selectSlot(slot: AvailabilityBlock): void {
-    if (slot.status !== 'AVAILABLE') {
+    if (slot.status !== 'AVAILABLE' || this.isPastSlot(slot)) {
       return;
     }
     this.selectedSlot = slot;
@@ -77,12 +78,48 @@ export class CounselorDetailComponent implements OnInit {
       appointmentDate: this.appointmentDate,
       startTime: this.selectedSlot.startTime
     }).subscribe({
-      next: () => {
-        this.message = 'Appointment booked successfully.';
+      next: appointment => {
+        const amount = this.counselor?.pricePerSession ?? 0;
+        this.router.navigate(
+          ['/payments', appointment.appointmentId],
+          {
+            queryParams: {
+              amount,
+              counselor: this.counselor?.fullName || ''
+            }
+          }
+        );
       },
       error: (err) => {
-        this.error = err?.error?.message || 'Unable to book appointment.';
+        const raw = typeof err?.error === 'string'
+          ? err.error
+          : (err?.error?.error || err?.error?.message);
+        if (raw && raw.includes('at least 1 hour')) {
+          this.error = 'Please book at least 1 hour before the start time.';
+        } else if (raw) {
+          this.error = raw;
+        } else {
+          this.error = 'Unable to book appointment.';
+        }
       }
     });
+  }
+
+  isPastSlot(slot: AvailabilityBlock): boolean {
+    if (!this.appointmentDate || !slot?.startTime) {
+      return false;
+    }
+    const now = new Date();
+    const [h, m] = slot.startTime.substring(0, 5).split(':').map(Number);
+    const selectedDate = new Date(this.appointmentDate + 'T00:00:00');
+    const slotTime = new Date(selectedDate);
+    slotTime.setHours(h, m || 0, 0, 0);
+    // Only block past times for today
+    const isSameDay = now.toDateString() === slotTime.toDateString();
+    return isSameDay && slotTime.getTime() <= now.getTime();
+  }
+
+  isSlotDisabled(slot: AvailabilityBlock): boolean {
+    return slot.status !== 'AVAILABLE' || this.isPastSlot(slot);
   }
 }

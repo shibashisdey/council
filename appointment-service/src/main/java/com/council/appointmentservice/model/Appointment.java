@@ -9,18 +9,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
-@Table(
-        name = "appointments",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        columnNames = {
-                                "counselor_id",
-                                "appointment_date",
-                                "start_time"
-                        }
-                )
-        }
-)
+@Table(name = "appointments")
 @Getter
 @Setter
 public class Appointment {
@@ -77,6 +66,21 @@ public class Appointment {
      */
     @Column(name = "slot_locked_at")
     private LocalDateTime slotLockedAt;
+
+    /**
+     * Proposed reschedule details (set by counselor, accepted/rejected by client)
+     */
+    @Column(name = "proposed_date")
+    private LocalDate proposedDate;
+
+    @Column(name = "proposed_start_time")
+    private LocalTime proposedStartTime;
+
+    @Column(name = "proposed_end_time")
+    private LocalTime proposedEndTime;
+
+    @Column(name = "reschedule_requested_by")
+    private String rescheduleRequestedBy;
 
     /**
      * Audit fields

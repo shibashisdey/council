@@ -1,0 +1,104 @@
+.payment-shell {
+  min-height: calc(100vh - 120px);
+  display: grid;
+  place-items: center;
+  padding: 40px 16px;
+  background: radial-gradient(circle at top, #f5fbf8 0%, #e9f2ec 45%, #eef6f3 100%);
+}
+
+.payment-card {
+  width: min(520px, 100%);
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 18px;
+}
+
+.payment-header h2 {
+  margin: 6px 0 4px;
+  font-size: 1.6rem;
+  color: #1f2937;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e6f4ed;
+  color: #1f6f54;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.payment-details {
+  border: 1px solid #e3ece8;
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  background: #f9fbfa;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  color: #374151;
+  font-weight: 600;
+}
+
+.detail-row.total {
+  border-top: 1px dashed #d2e2da;
+  padding-top: 12px;
+  font-size: 1.1rem;
+}
+
+.payment-actions {
+  display: grid;
+  gap: 10px;
+  text-align: center;
+}
+
+.payment-actions button {
+  width: 100%;
+  background: linear-gradient(135deg, #2f7d5e 0%, #1f6f54 100%);
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-weight: 600;
+  border: none;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.payment-actions button:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.96);
+}
+
+.meeting-link {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #eef6f1;
+  border: 1px solid #d6e8df;
+}
+
+.meeting-link .btn-primary {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #1f6f54;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.payment-actions .small {
+  font-size: 0.78rem;
+}

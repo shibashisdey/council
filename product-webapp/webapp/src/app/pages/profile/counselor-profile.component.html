@@ -1,4 +1,4 @@
-﻿<section class="profile-shell">
+<section class="profile-shell">
   <div class="profile-header">
     <h2>Counselor Profile</h2>
     <p class="muted">Update your professional details.</p>
@@ -175,7 +175,7 @@
           </div>
         </div>
         <div class="section-actions" *ngIf="personalEditMode">
-          <button type="button" class="btn-ghost" (click)="setPersonalEditMode(false)">Cancel</button>
+          <button type="button" class="btn-danger" (click)="setPersonalEditMode(false)">Cancel</button>
           <button type="submit" [disabled]="loading || profileForm.invalid">Save changes</button>
         </div>
       </form>

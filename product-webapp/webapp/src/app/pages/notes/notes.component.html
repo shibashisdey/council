@@ -1,0 +1,162 @@
+<section class="notes-shell">
+  <div class="notes-header">
+    <div>
+      <h1>Session Notes</h1>
+      <p *ngIf="role === 'THERAPIST'">Capture session notes and share them after the session ends.</p>
+      <p *ngIf="role === 'CLIENT'">Your shared notes and prescriptions appear here.</p>
+    </div>
+  </div>
+
+  <div class="notes-content" *ngIf="role === 'THERAPIST'">
+    <div class="notes-column">
+      <div class="column-card">
+        <div class="column-title">Sessions</div>
+        <div class="column-subtitle">Pick a session to create or update notes.</div>
+
+        <div class="card-list" *ngIf="sessions.length">
+          <button
+            class="session-card"
+            *ngFor="let session of sessions"
+            (click)="selectAppointment(session)"
+            [class.active]="isSelected(session)">
+            <div class="session-title">Appointment #{{ session.appointmentId }}</div>
+            <div class="session-meta">{{ formatSession(session) }}</div>
+            <div class="session-status">{{ session.status }}</div>
+            <div class="session-badges">
+              <span class="badge" *ngIf="!canCreate(session)">Starts soon</span>
+              <span class="badge success" *ngIf="canCreate(session) && !notesByAppointment.get(session.appointmentId)">Notes open</span>
+              <span class="badge success" *ngIf="notesByAppointment.get(session.appointmentId)">Shared</span>
+              <span class="badge" *ngIf="hasDraft(session) && !notesByAppointment.get(session.appointmentId)">Local draft</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="empty-state" *ngIf="!sessions.length && !loading">
+          No sessions found yet.
+        </div>
+      </div>
+    </div>
+
+    <div class="notes-column">
+      <div class="column-card">
+        <div class="column-title">Session Notes</div>
+        <div class="column-subtitle" *ngIf="!selectedAppointment">Select a session to begin writing.</div>
+
+        <div class="notes-form" *ngIf="selectedAppointment">
+          <div class="session-summary">
+            <div class="session-title">Appointment #{{ selectedAppointment.appointmentId }}</div>
+            <div class="session-meta">{{ formatSession(selectedAppointment) }}</div>
+          </div>
+
+          <div class="alert info" *ngIf="selectedAppointment && !canCreate(selectedAppointment) && !hasSessionEnded(selectedAppointment)">
+            Notes can be created once the session starts.
+          </div>
+          <div class="alert info" *ngIf="selectedAppointment && isShared()">
+            Notes have been shared. This note is read-only.
+          </div>
+          <div class="alert info" *ngIf="selectedAppointment && hasSessionEnded(selectedAppointment) && !isShared()">
+            Session ended. You can still edit until you share the note. Sharing is allowed 15 minutes before to 15 minutes after end time.
+          </div>
+
+          <label class="field">
+            <span>Summary</span>
+            <textarea [(ngModel)]="form.summary" [disabled]="!canCreate(selectedAppointment)"></textarea>
+          </label>
+
+          <label class="field">
+            <span>Observations</span>
+            <textarea [(ngModel)]="form.observations" [disabled]="!canCreate(selectedAppointment)"></textarea>
+          </label>
+
+          <label class="field">
+            <span>Recommendations</span>
+            <textarea [(ngModel)]="form.recommendations" [disabled]="!canCreate(selectedAppointment)"></textarea>
+          </label>
+
+          <label class="field">
+            <span>Private Notes (optional)</span>
+            <textarea [(ngModel)]="form.privateNotes" [disabled]="!canCreate(selectedAppointment)"></textarea>
+          </label>
+
+          <div class="field">
+            <span>Attachments (coming soon)</span>
+            <input type="file" disabled />
+            <small>Image upload will be added in a later update.</small>
+          </div>
+
+          <div class="status-row">
+            <span *ngIf="selectedNote?.sharedWithClient" class="badge success">Shared with client</span>
+            <span *ngIf="!selectedNote?.sharedWithClient && selectedAppointment && hasDraft(selectedAppointment)" class="badge muted">Local draft</span>
+            <span *ngIf="!selectedNote?.sharedWithClient && selectedAppointment && !hasDraft(selectedAppointment)" class="badge muted">No draft saved</span>
+            <button
+              class="badge link"
+              type="button"
+              *ngIf="selectedNote?.pdfUrl"
+              (click)="openPdf(selectedNote?.pdfUrl || '', 'Session Note PDF')">
+              View PDF
+            </button>
+          </div>
+
+          <div class="action-row">
+            <button class="btn-primary" (click)="saveNote()" [disabled]="saving || !canCreate(selectedAppointment)">
+              {{ selectedNote ? 'Update Notes' : 'Save Notes' }}
+            </button>
+            <button
+              class="btn-secondary"
+              (click)="shareNote()"
+              [disabled]="saving || !selectedNote || !canShare(selectedAppointment) || isShared()">
+              Share with Client
+            </button>
+          </div>
+
+          <div class="alert success" *ngIf="message">{{ message }}</div>
+          <div class="alert error" *ngIf="error">{{ error }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes-content" *ngIf="role === 'CLIENT'">
+    <div class="column-card">
+      <div class="column-title">Shared Notes</div>
+      <div class="column-subtitle">Your counselor will share notes after each session.</div>
+
+      <div class="note-card" *ngFor="let note of notes">
+        <div class="note-header">
+          <div>Session {{ note.sessionDate }}</div>
+          <div class="badge">Counselor #{{ note.counselorId }}</div>
+        </div>
+        <div class="note-section">
+          <h4 *ngIf="note.summary">Summary</h4>
+          <p *ngIf="note.summary">{{ note.summary }}</p>
+        </div>
+        <div class="note-section">
+          <h4 *ngIf="note.observations">Observations</h4>
+          <p *ngIf="note.observations">{{ note.observations }}</p>
+        </div>
+        <div class="note-section">
+          <h4 *ngIf="note.recommendations">Recommendations</h4>
+          <p *ngIf="note.recommendations">{{ note.recommendations }}</p>
+        </div>
+        <div class="note-section" *ngIf="note.pdfUrl">
+          <button class="link-pill" type="button" (click)="openPdf(note.pdfUrl, 'Session Note PDF')">Open PDF</button>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="!notes.length && !loading">
+        No shared notes yet.
+      </div>
+    </div>
+  </div>
+
+  <div class="pdf-modal" *ngIf="pdfPreviewUrl">
+    <div class="pdf-backdrop" (click)="closePdf()"></div>
+    <div class="pdf-panel">
+      <div class="pdf-header">
+        <div class="pdf-title">{{ pdfPreviewTitle }}</div>
+        <button class="btn-secondary" type="button" (click)="closePdf()">Close</button>
+      </div>
+      <iframe [src]="pdfPreviewUrl" title="Session note PDF"></iframe>
+    </div>
+  </div>
+</section>

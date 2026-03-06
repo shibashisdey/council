@@ -9,6 +9,7 @@ import { Appointment, AppointmentService } from '../../services/appointment.serv
 export class ClientAppointmentsComponent implements OnInit {
   appointments: Appointment[] = [];
   message = '';
+  showPast = false;
 
   constructor(private appointmentService: AppointmentService) {}
 
@@ -18,9 +19,33 @@ export class ClientAppointmentsComponent implements OnInit {
 
   loadAppointments(): void {
     this.appointmentService.listForClient().subscribe({
-      next: data => this.appointments = data,
+      next: data => this.appointments = data || [],
       error: () => this.message = 'Unable to load appointments.'
     });
+  }
+
+  get upcomingAppointments(): Appointment[] {
+    const now = new Date();
+    return this.appointments
+      .filter(appt => {
+        const end = new Date(`${appt.appointmentDate}T${appt.endTime}`);
+        return end.getTime() >= now.getTime();
+      })
+      .sort((a, b) =>
+        `${a.appointmentDate}T${a.startTime}`.localeCompare(`${b.appointmentDate}T${b.startTime}`)
+      );
+  }
+
+  get pastAppointments(): Appointment[] {
+    const now = new Date();
+    return this.appointments
+      .filter(appt => {
+        const end = new Date(`${appt.appointmentDate}T${appt.endTime}`);
+        return end.getTime() < now.getTime();
+      })
+      .sort((a, b) =>
+        `${b.appointmentDate}T${b.startTime}`.localeCompare(`${a.appointmentDate}T${a.startTime}`)
+      );
   }
 
   cancel(appointmentId: number): void {

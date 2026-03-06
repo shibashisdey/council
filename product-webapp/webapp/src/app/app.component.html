@@ -9,12 +9,13 @@
       <a class="nav-pill" routerLink="/counselors" *ngIf="authState.currentUser">Counselors</a>
       <a class="nav-pill" routerLink="/appointments" *ngIf="authState.currentUser?.role === 'CLIENT'">Appointments</a>
       <a class="nav-pill" routerLink="/sessions" *ngIf="authState.currentUser?.role === 'THERAPIST'">Sessions</a>
+      <a class="nav-pill" routerLink="/notes" *ngIf="authState.currentUser">Notes</a>
       <a class="nav-pill" routerLink="/profile/user" *ngIf="authState.currentUser?.role === 'CLIENT'">Profile</a>
       <a class="nav-pill" routerLink="/profile/counselor" *ngIf="authState.currentUser?.role === 'THERAPIST'">Profile</a>
       <a class="nav-pill" routerLink="/dashboard" *ngIf="authState.currentUser">Dashboard</a>
       <a class="nav-pill" routerLink="/auth/login" *ngIf="!authState.currentUser">Login</a>
       <a class="nav-pill" routerLink="/auth/register" *ngIf="!authState.currentUser">Register</a>
-      <button class="nav-pill" type="button" (click)="logout()" *ngIf="authState.currentUser">Logout</button>
+      <button class="nav-pill danger" type="button" (click)="logout()" *ngIf="authState.currentUser">Logout</button>
     </nav>
   </header>
   <main class="content-shell">

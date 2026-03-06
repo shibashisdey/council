@@ -3,6 +3,8 @@ package com.council.reviewservice.service;
 import com.council.reviewservice.client.AppointmentClient;
 import com.council.reviewservice.client.NotificationClient;
 import com.council.reviewservice.dto.request.CreateSessionNoteRequest;
+import com.council.reviewservice.dto.request.NotifySessionNoteRequest;
+import com.council.reviewservice.dto.request.ShareSessionNoteContentRequest;
 import com.council.reviewservice.dto.request.ShareSessionNoteRequest;
 import com.council.reviewservice.dto.request.UpdatePdfRequest;
 import com.council.reviewservice.dto.request.UpdateSessionNoteRequest;
@@ -16,6 +18,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -48,6 +52,7 @@ public class SessionNoteServiceImpl implements SessionNoteService {
                 && !"COMPLETED".equals(appointment.getStatus())) {
             throw new IllegalStateException("Appointment is not in a valid state for notes");
         }
+        ensureAfterSessionStart(appointment);
 
         SessionNote note = new SessionNote();
         note.setAppointmentId(appointment.getAppointmentId());
@@ -82,6 +87,12 @@ public class SessionNoteServiceImpl implements SessionNoteService {
             throw new SecurityException("Not allowed to update this note");
         }
 
+        AppointmentInternalResponse appointment = getAppointmentOrThrow(note.getAppointmentId());
+        if (note.isSharedWithClient()) {
+            throw new IllegalStateException("Session note is already shared and cannot be edited");
+        }
+        ensureAfterSessionStart(appointment);
+
         if (request.getSummary() != null) {
             note.setSummary(request.getSummary());
         }
@@ -111,6 +122,8 @@ public class SessionNoteServiceImpl implements SessionNoteService {
         if (!counselorId.equals(note.getCounselorId())) {
             throw new SecurityException("Not allowed to share this note");
         }
+        AppointmentInternalResponse appointment = getAppointmentOrThrow(note.getAppointmentId());
+        ensureWithinShareWindow(appointment);
 
         note.setSharedWithClient(request.isShared());
         SessionNote saved = sessionNoteRepository.save(note);
@@ -119,6 +132,52 @@ public class SessionNoteServiceImpl implements SessionNoteService {
             appointmentClient.completeAppointment(note.getAppointmentId());
             notificationClient.notifySessionNoteShared(note.getId());
         }
+
+        return toCounselorResponse(saved);
+    }
+
+    @Override
+    public SessionNoteCounselorResponse shareSessionNoteWithContent(
+            Long counselorId,
+            ShareSessionNoteContentRequest request
+    ) {
+        if (request.getAppointmentId() == null) {
+            throw new IllegalArgumentException("appointmentId is required");
+        }
+        AppointmentInternalResponse appointment = getAppointmentOrThrow(request.getAppointmentId());
+        if (!counselorId.equals(appointment.getCounselorId())) {
+            throw new SecurityException("Not allowed to share notes for this appointment");
+        }
+        ensureWithinShareWindow(appointment);
+
+        SessionNote note = sessionNoteRepository.findByAppointmentId(appointment.getAppointmentId())
+                .orElseGet(SessionNote::new);
+
+        if (note.getId() != null && note.isSharedWithClient()) {
+            return toCounselorResponse(note);
+        }
+
+        note.setAppointmentId(appointment.getAppointmentId());
+        note.setUserId(appointment.getClientId());
+        note.setCounselorId(appointment.getCounselorId());
+        note.setSessionDate(appointment.getAppointmentDate());
+        note.setSharedWithClient(true);
+
+        SessionNote saved = sessionNoteRepository.save(note);
+
+        String summary = required(request.getSummary(), "summary");
+        String observations = required(request.getObservations(), "observations");
+        String recommendations = required(request.getRecommendations(), "recommendations");
+
+        NotifySessionNoteRequest notify = new NotifySessionNoteRequest();
+        notify.setNoteId(saved.getId());
+        notify.setAppointmentId(appointment.getAppointmentId());
+        notify.setSummary(summary);
+        notify.setObservations(observations);
+        notify.setRecommendations(recommendations);
+
+        appointmentClient.completeAppointment(appointment.getAppointmentId());
+        notificationClient.notifySessionNoteSharedWithContent(notify);
 
         return toCounselorResponse(saved);
     }
@@ -174,6 +233,41 @@ public class SessionNoteServiceImpl implements SessionNoteService {
             return response;
         } catch (RuntimeException e) {
             throw new IllegalStateException("Appointment service unavailable", e);
+        }
+    }
+
+    private void ensureAfterSessionStart(AppointmentInternalResponse appointment) {
+        if (appointment.getAppointmentDate() == null || appointment.getStartTime() == null) {
+            throw new IllegalStateException("Appointment time is not available");
+        }
+        LocalDateTime start = appointment.getAppointmentDate().atTime(appointment.getStartTime());
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        if (now.isBefore(start)) {
+            throw new IllegalStateException("Session notes can be created only after the session starts");
+        }
+    }
+
+    private void ensureAfterSessionEnd(AppointmentInternalResponse appointment) {
+        if (appointment.getAppointmentDate() == null || appointment.getEndTime() == null) {
+            throw new IllegalStateException("Appointment time is not available");
+        }
+        LocalDateTime end = appointment.getAppointmentDate().atTime(appointment.getEndTime());
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        if (now.isBefore(end)) {
+            throw new IllegalStateException("Session notes can be shared only after the session ends");
+        }
+    }
+
+    private void ensureWithinShareWindow(AppointmentInternalResponse appointment) {
+        if (appointment.getAppointmentDate() == null || appointment.getEndTime() == null) {
+            throw new IllegalStateException("Appointment time is not available");
+        }
+        LocalDateTime end = appointment.getAppointmentDate().atTime(appointment.getEndTime());
+        LocalDateTime windowStart = end.minusMinutes(15);
+        LocalDateTime windowEnd = end.plusMinutes(15);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        if (now.isBefore(windowStart) || now.isAfter(windowEnd)) {
+            throw new IllegalStateException("Session notes can be shared from 15 minutes before end until 15 minutes after end");
         }
     }
 

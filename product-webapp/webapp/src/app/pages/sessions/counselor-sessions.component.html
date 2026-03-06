@@ -2,21 +2,52 @@
   <div class="appt-header">
     <div>
       <h2>My Sessions</h2>
-      <p class="muted">Upcoming client appointments.</p>
+      <p class="muted">Manage upcoming and past sessions.</p>
     </div>
   </div>
 
   <div class="form-error" *ngIf="message">{{ message }}</div>
 
-  <div class="appt-grid" *ngIf="sessions.length > 0">
-    <div class="card" *ngFor="let appt of sessions">
-      <div class="card-top">
-        <h3>#{{ appt.appointmentId }}</h3>
-        <span class="pill">{{ appt.status }}</span>
+  <div *ngIf="sessions.length > 0">
+    <div class="section-label">Upcoming sessions</div>
+    <div class="appt-grid" *ngIf="upcomingSessions.length > 0">
+      <div class="card" *ngFor="let appt of upcomingSessions">
+        <div class="card-top">
+          <h3>#{{ appt.appointmentId }}</h3>
+          <span class="pill">{{ appt.status }}</span>
+        </div>
+        <p class="muted">{{ appt.appointmentDate }} - {{ appt.startTime }} - {{ appt.endTime }}</p>
+        <div class="card-footer" *ngIf="appt.meetingLink">
+          <a class="btn-primary" [href]="appt.meetingLink" target="_blank" rel="noopener">Join</a>
+        </div>
       </div>
-      <p class="muted">{{ appt.appointmentDate }} · {{ appt.startTime }} - {{ appt.endTime }}</p>
-      <div class="muted" *ngIf="appt.meetingLink">
-        Meeting: <a [href]="appt.meetingLink" target="_blank" rel="noopener">Join session</a>
+    </div>
+    <div class="empty-state" *ngIf="upcomingSessions.length === 0">
+      <h3>No upcoming sessions</h3>
+      <p class="muted">Future client sessions will appear here.</p>
+    </div>
+
+    <button type="button" class="past-toggle" (click)="showPast = !showPast">
+      {{ showPast ? 'Hide past sessions' : 'Show past sessions' }}
+    </button>
+
+    <div class="past-wrap" *ngIf="showPast">
+      <div class="section-label">Past sessions</div>
+      <div class="appt-grid" *ngIf="pastSessions.length > 0">
+        <div class="card" *ngFor="let appt of pastSessions">
+          <div class="card-top">
+            <h3>#{{ appt.appointmentId }}</h3>
+            <span class="pill">{{ appt.status }}</span>
+          </div>
+          <p class="muted">{{ appt.appointmentDate }} - {{ appt.startTime }} - {{ appt.endTime }}</p>
+          <div class="card-footer" *ngIf="appt.meetingLink">
+            <a class="btn-primary" [href]="appt.meetingLink" target="_blank" rel="noopener">Join</a>
+          </div>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="pastSessions.length === 0">
+        <h3>No past sessions</h3>
+        <p class="muted">Completed sessions will appear here.</p>
       </div>
     </div>
   </div>

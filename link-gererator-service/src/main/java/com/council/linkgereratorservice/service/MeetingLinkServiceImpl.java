@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 public class MeetingLinkServiceImpl implements MeetingLinkService {
@@ -19,6 +20,8 @@ public class MeetingLinkServiceImpl implements MeetingLinkService {
     private final MeetingLinkRepository meetingLinkRepository;
     private final SecureRandom secureRandom = new SecureRandom();
     private final String baseUrl;
+    private static final int EARLY_JOIN_MINUTES = 10;
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
 
     public MeetingLinkServiceImpl(
             MeetingLinkRepository meetingLinkRepository,
@@ -91,12 +94,12 @@ public class MeetingLinkServiceImpl implements MeetingLinkService {
         MeetingLink link = meetingLinkRepository.findByAppointmentId(appointmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Meeting link not found"));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(IST_ZONE);
         LocalDateTime start = LocalDateTime.of(link.getAppointmentDate(), link.getStartTime());
         LocalDateTime end = LocalDateTime.of(link.getAppointmentDate(), link.getEndTime());
 
-        if (now.isBefore(start) || now.isAfter(end)) {
-            throw new IllegalStateException("Meeting link is not available outside the scheduled time");
+        if (now.isBefore(start.minusMinutes(EARLY_JOIN_MINUTES)) || now.isAfter(end)) {
+            throw new IllegalStateException("Meeting link is not available outside the join window");
         }
 
         return link.getMeetingLink();

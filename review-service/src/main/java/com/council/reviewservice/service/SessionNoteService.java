@@ -1,6 +1,7 @@
 package com.council.reviewservice.service;
 
 import com.council.reviewservice.dto.request.CreateSessionNoteRequest;
+import com.council.reviewservice.dto.request.ShareSessionNoteContentRequest;
 import com.council.reviewservice.dto.request.ShareSessionNoteRequest;
 import com.council.reviewservice.dto.request.UpdatePdfRequest;
 import com.council.reviewservice.dto.request.UpdateSessionNoteRequest;
@@ -17,6 +18,8 @@ public interface SessionNoteService {
     SessionNoteCounselorResponse updateSessionNote(Long counselorId, Long noteId, UpdateSessionNoteRequest request);
 
     SessionNoteCounselorResponse shareSessionNote(Long counselorId, Long noteId, ShareSessionNoteRequest request);
+
+    SessionNoteCounselorResponse shareSessionNoteWithContent(Long counselorId, ShareSessionNoteContentRequest request);
 
     void updatePdf(Long noteId, UpdatePdfRequest request);
 

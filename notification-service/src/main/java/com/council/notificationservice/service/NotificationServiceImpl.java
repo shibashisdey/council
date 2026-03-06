@@ -7,6 +7,7 @@ import com.council.notificationservice.client.UserClient;
 import com.council.notificationservice.dto.AppointmentInternalResponse;
 import com.council.notificationservice.dto.CounselorResponse;
 import com.council.notificationservice.dto.SessionNotePublicResponse;
+import com.council.notificationservice.dto.SessionNoteShareRequest;
 import com.council.notificationservice.dto.UserPublicResponse;
 import com.council.notificationservice.dto.UpdatePdfRequest;
 import org.slf4j.Logger;
@@ -81,6 +82,50 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    @Override
+    public void handleSessionNoteShared(SessionNoteShareRequest request) {
+        if (request == null || request.getNoteId() == null || request.getAppointmentId() == null) {
+            throw new IllegalArgumentException("noteId and appointmentId are required");
+        }
+        Long noteId = request.getNoteId();
+        log.info("Handling session note share with content: noteId={}, appointmentId={}",
+                noteId, request.getAppointmentId());
+
+        AppointmentInternalResponse appointment = appointmentClient.getAppointment(request.getAppointmentId());
+        UserPublicResponse user = userClient.getUserPublic(appointment.getClientId());
+        CounselorResponse counselor = counselorClient.getCounselorById(appointment.getCounselorId());
+
+        String objectKey = "session-notes/"
+                + appointment.getClientId() + "/"
+                + appointment.getAppointmentId() + ".pdf";
+
+        String content = buildPdfPlaceholderContent(
+                toSessionNoteResponse(request, appointment),
+                appointment,
+                user,
+                counselor
+        );
+        String publicUrl;
+        try {
+            publicUrl = r2StorageService.uploadPdfPlaceholder(objectKey, content);
+            log.info("Uploaded PDF to R2: noteId={}, objectKey={}, url={}", noteId, objectKey, publicUrl);
+        } catch (RuntimeException e) {
+            log.error("Failed to upload PDF to R2: noteId={}, objectKey={}", noteId, objectKey, e);
+            throw e;
+        }
+
+        UpdatePdfRequest update = new UpdatePdfRequest();
+        update.setPdfObjectKey(objectKey);
+        update.setPdfUrl(publicUrl);
+        try {
+            reviewClient.updatePdf(noteId, update);
+            log.info("Updated review service with PDF info: noteId={}", noteId);
+        } catch (RuntimeException e) {
+            log.error("Failed to update review service with PDF info: noteId={}", noteId, e);
+            throw e;
+        }
+    }
+
     private String buildPdfPlaceholderContent(
             SessionNotePublicResponse note,
             AppointmentInternalResponse appointment,
@@ -108,6 +153,22 @@ public class NotificationServiceImpl implements NotificationService {
                 + "\nSummary:\n" + safe(note.getSummary()) + "\n"
                 + "\nObservations:\n" + safe(note.getObservations()) + "\n"
                 + "\nRecommendations:\n" + safe(note.getRecommendations()) + "\n";
+    }
+
+    private SessionNotePublicResponse toSessionNoteResponse(
+            SessionNoteShareRequest request,
+            AppointmentInternalResponse appointment
+    ) {
+        SessionNotePublicResponse response = new SessionNotePublicResponse();
+        response.setId(request.getNoteId());
+        response.setAppointmentId(request.getAppointmentId());
+        response.setUserId(appointment.getClientId());
+        response.setCounselorId(appointment.getCounselorId());
+        response.setSessionDate(appointment.getAppointmentDate());
+        response.setSummary(request.getSummary());
+        response.setObservations(request.getObservations());
+        response.setRecommendations(request.getRecommendations());
+        return response;
     }
 
     private String safe(String value) {

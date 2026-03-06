@@ -11,6 +11,8 @@ import { CounselorListComponent } from './pages/counselors/counselor-list.compon
 import { CounselorDetailComponent } from './pages/counselors/counselor-detail.component';
 import { ClientAppointmentsComponent } from './pages/appointments/client-appointments.component';
 import { CounselorSessionsComponent } from './pages/sessions/counselor-sessions.component';
+import { PaymentCheckoutComponent } from './pages/payments/payment-checkout.component';
+import { NotesComponent } from './pages/notes/notes.component';
 import { ProfileGuard } from './core/profile.guard';
 import { ProfileSetupGuard } from './core/profile-setup.guard';
 import { ScheduleSetupGuard } from './core/schedule-setup.guard';
@@ -21,6 +23,8 @@ const routes: Routes = [
   { path: 'counselors', component: CounselorListComponent, canActivate: [AuthGuard, ProfileGuard] },
   { path: 'counselors/:id', component: CounselorDetailComponent, canActivate: [AuthGuard, ProfileGuard] },
   { path: 'appointments', component: ClientAppointmentsComponent, canActivate: [AuthGuard, ProfileGuard] },
+  { path: 'payments/:appointmentId', component: PaymentCheckoutComponent, canActivate: [AuthGuard, ProfileGuard] },
+  { path: 'notes', component: NotesComponent, canActivate: [AuthGuard, ProfileGuard] },
   { path: 'sessions', component: CounselorSessionsComponent, canActivate: [AuthGuard, ProfileGuard] },
   { path: 'profile/user', component: UserProfileComponent, canActivate: [AuthGuard, ProfileGuard] },
   { path: 'profile/counselor', component: CounselorProfileComponent, canActivate: [AuthGuard, ProfileGuard] },

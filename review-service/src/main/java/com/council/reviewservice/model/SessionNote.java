@@ -38,13 +38,13 @@ public class SessionNote {
     @Column(name = "session_date", nullable = false)
     private LocalDate sessionDate;
 
-    @Column(nullable = false, length = 2000)
+    @Column(length = 2000)
     private String summary;
 
-    @Column(nullable = false, length = 4000)
+    @Column(length = 4000)
     private String observations;
 
-    @Column(nullable = false, length = 4000)
+    @Column(length = 4000)
     private String recommendations;
 
     @Column(name = "private_notes", length = 8000)

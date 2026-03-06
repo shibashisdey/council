@@ -84,17 +84,32 @@ export class DashboardComponent implements OnInit {
     if (!this.appointments.length) {
       return null;
     }
-    return [...this.appointments].sort((a, b) =>
-      `${a.appointmentDate}T${a.startTime}`.localeCompare(`${b.appointmentDate}T${b.startTime}`)
-    )[0];
+    const now = new Date().getTime();
+    return [...this.appointments]
+      .filter(appt => this.isUpcoming(appt.appointmentDate, appt.endTime))
+      .filter(appt => !['CANCELLED', 'EXPIRED', 'COMPLETED'].includes(appt.status))
+      .sort((a, b) =>
+        `${a.appointmentDate}T${a.startTime}`.localeCompare(`${b.appointmentDate}T${b.startTime}`)
+      )[0] || null;
   }
 
   get nextSession(): CounselorAppointment | null {
     if (!this.counselorAppointments.length) {
       return null;
     }
-    return [...this.counselorAppointments].sort((a, b) =>
-      `${a.appointmentDate}T${a.startTime}`.localeCompare(`${b.appointmentDate}T${b.startTime}`)
-    )[0];
+    return [...this.counselorAppointments]
+      .filter(appt => this.isUpcoming(appt.appointmentDate, appt.endTime))
+      .filter(appt => !['CANCELLED', 'EXPIRED', 'COMPLETED'].includes(appt.status))
+      .sort((a, b) =>
+        `${a.appointmentDate}T${a.startTime}`.localeCompare(`${b.appointmentDate}T${b.startTime}`)
+      )[0] || null;
+  }
+
+  private isUpcoming(date: string, endTime: string): boolean {
+    if (!date || !endTime) {
+      return false;
+    }
+    const end = new Date(`${date}T${endTime}`);
+    return end.getTime() >= Date.now();
   }
 }

@@ -1,0 +1,43 @@
+<section class="payment-shell">
+  <div class="payment-card">
+    <div class="payment-header">
+      <span class="badge">Mock Payment</span>
+      <h2>Confirm your session</h2>
+      <p class="muted">Complete payment to lock your appointment.</p>
+    </div>
+
+    <div class="form-error" *ngIf="error">{{ error }}</div>
+    <div class="form-success" *ngIf="message">{{ message }}</div>
+
+    <div class="payment-details" *ngIf="!error">
+      <div class="detail-row">
+        <span>Appointment</span>
+        <strong>#{{ appointmentId }}</strong>
+      </div>
+      <div class="detail-row">
+        <span>Counselor</span>
+        <strong>{{ counselorName || 'Counselor' }}</strong>
+      </div>
+      <div class="detail-row total">
+        <span>Total</span>
+        <strong>₹{{ amount || 0 }}</strong>
+      </div>
+    </div>
+
+    <div class="payment-actions" *ngIf="!error">
+      <button type="button" (click)="payNow()" [disabled]="loading || !!meetingLink">
+        {{ loading ? 'Processing...' : (meetingLink ? 'Paid' : 'Pay Now') }}
+      </button>
+
+      <div class="meeting-link" *ngIf="meetingLink">
+        <p class="muted">Your session is confirmed.</p>
+        <a class="btn-primary" [href]="meetingLink" target="_blank" rel="noopener">Join meeting</a>
+      </div>
+
+      <button type="button" class="btn-ghost" (click)="goToAppointments()">
+        View appointments
+      </button>
+      <p class="muted small">This is a demo payment flow.</p>
+    </div>
+  </div>
+</section>

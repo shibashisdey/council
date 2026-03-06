@@ -82,6 +82,50 @@ public class AppointmentController {
     }
 
     /**
+     * COUNSELOR -> Propose reschedule (client must accept/reject)
+     */
+    @PutMapping("/{appointmentId}/reschedule/request")
+    public AppointmentResponse requestReschedule(
+            @PathVariable Long appointmentId,
+            @RequestHeader("X-USER-ID") Long requesterId,
+            @RequestHeader("X-USER-ROLE") String role,
+            @RequestBody RescheduleAppointmentRequest request
+    ) {
+        requireTherapist(role);
+        var counselor = counselorClient.getCounselorByUserId(requesterId);
+        if (counselor == null || counselor.getId() == null) {
+            throw new SecurityException("Counselor profile not found");
+        }
+        return appointmentService.requestRescheduleByCounselor(
+                appointmentId,
+                counselor.getId(),
+                request
+        );
+    }
+
+    /**
+     * CLIENT -> Accept counselor reschedule proposal
+     */
+    @PutMapping("/{appointmentId}/reschedule/accept")
+    public AppointmentResponse acceptReschedule(
+            @PathVariable Long appointmentId,
+            @RequestHeader("X-USER-ID") Long clientId
+    ) {
+        return appointmentService.acceptRescheduleRequest(appointmentId, clientId);
+    }
+
+    /**
+     * CLIENT -> Reject counselor reschedule proposal
+     */
+    @PutMapping("/{appointmentId}/reschedule/reject")
+    public AppointmentResponse rejectReschedule(
+            @PathVariable Long appointmentId,
+            @RequestHeader("X-USER-ID") Long clientId
+    ) {
+        return appointmentService.rejectRescheduleRequest(appointmentId, clientId);
+    }
+
+    /**
      * CLIENT / COUNSELOR → Cancel appointment
      */
     @DeleteMapping("/{appointmentId}")

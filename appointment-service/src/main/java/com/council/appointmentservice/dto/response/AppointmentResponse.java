@@ -28,6 +28,14 @@ public class AppointmentResponse {
 
     private LocalTime endTime;
 
+    private LocalDate proposedDate;
+
+    private LocalTime proposedStartTime;
+
+    private LocalTime proposedEndTime;
+
+    private String rescheduleRequestedBy;
+
     private AppointmentStatus status;
 
     private String paymentId;

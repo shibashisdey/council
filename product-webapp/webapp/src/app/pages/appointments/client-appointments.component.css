@@ -52,5 +52,27 @@
 
 .card-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-label {
+  margin: 12px 0 6px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.past-toggle {
+  align-self: start;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px dashed var(--border);
+  color: var(--ink);
+}
+
+.past-wrap {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }

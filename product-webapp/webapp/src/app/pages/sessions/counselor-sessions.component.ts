@@ -10,6 +10,7 @@ import { CounselorService } from '../../services/counselor.service';
 export class CounselorSessionsComponent implements OnInit {
   sessions: CounselorAppointment[] = [];
   message = '';
+  showPast = false;
 
   constructor(
     private appointmentService: AppointmentService,
@@ -24,11 +25,35 @@ export class CounselorSessionsComponent implements OnInit {
     this.counselorService.getMe().subscribe({
       next: profile => {
         this.appointmentService.listForCounselor(profile.id).subscribe({
-          next: data => this.sessions = data,
+          next: data => this.sessions = data || [],
           error: () => this.message = 'Unable to load sessions.'
         });
       },
       error: () => this.message = 'Unable to load counselor profile.'
     });
+  }
+
+  get upcomingSessions(): CounselorAppointment[] {
+    const now = new Date();
+    return this.sessions
+      .filter(appt => {
+        const end = new Date(`${appt.appointmentDate}T${appt.endTime}`);
+        return end.getTime() >= now.getTime();
+      })
+      .sort((a, b) =>
+        `${a.appointmentDate}T${a.startTime}`.localeCompare(`${b.appointmentDate}T${b.startTime}`)
+      );
+  }
+
+  get pastSessions(): CounselorAppointment[] {
+    const now = new Date();
+    return this.sessions
+      .filter(appt => {
+        const end = new Date(`${appt.appointmentDate}T${appt.endTime}`);
+        return end.getTime() < now.getTime();
+      })
+      .sort((a, b) =>
+        `${b.appointmentDate}T${b.startTime}`.localeCompare(`${a.appointmentDate}T${a.startTime}`)
+      );
   }
 }

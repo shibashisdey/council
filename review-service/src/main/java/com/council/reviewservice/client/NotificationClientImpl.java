@@ -1,5 +1,6 @@
 package com.council.reviewservice.client;
 
+import com.council.reviewservice.dto.request.NotifySessionNoteRequest;
 import com.council.reviewservice.security.InternalJwtService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -31,6 +32,16 @@ public class NotificationClientImpl implements NotificationClient {
     public void notifySessionNoteShared(Long sessionNoteId) {
         webClient.post()
                 .uri("/notifications/session-note/{id}", sessionNoteId)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .block();
+    }
+
+    @Override
+    public void notifySessionNoteSharedWithContent(NotifySessionNoteRequest request) {
+        webClient.post()
+                .uri("/notifications/session-note")
+                .bodyValue(request)
                 .retrieve()
                 .bodyToMono(Void.class)
                 .block();

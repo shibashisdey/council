@@ -17,6 +17,8 @@ import { CounselorListComponent } from './pages/counselors/counselor-list.compon
 import { CounselorDetailComponent } from './pages/counselors/counselor-detail.component';
 import { ClientAppointmentsComponent } from './pages/appointments/client-appointments.component';
 import { CounselorSessionsComponent } from './pages/sessions/counselor-sessions.component';
+import { PaymentCheckoutComponent } from './pages/payments/payment-checkout.component';
+import { NotesComponent } from './pages/notes/notes.component';
 
 @NgModule({
   declarations: [
@@ -30,7 +32,9 @@ import { CounselorSessionsComponent } from './pages/sessions/counselor-sessions.
     CounselorListComponent,
     CounselorDetailComponent,
     ClientAppointmentsComponent,
-    CounselorSessionsComponent
+    CounselorSessionsComponent,
+    PaymentCheckoutComponent,
+    NotesComponent
   ],
   imports: [
     BrowserModule,

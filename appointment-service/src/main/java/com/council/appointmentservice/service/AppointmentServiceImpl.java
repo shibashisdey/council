@@ -18,13 +18,13 @@ import com.council.appointmentservice.model.AppointmentStatus;
 import com.council.appointmentservice.repository.AppointmentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import static com.council.appointmentservice.dto.BlockSlotRequest.UnavailabilityReason.APPOINTMENT_CONFIRMED;
@@ -36,6 +36,8 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     private static final int SLOT_DURATION_HOURS = 1;
     private static final int BOOKING_WINDOW_DAYS = 45;
+    private static final int BOOKING_LEAD_MINUTES = 30;
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
     private static final Logger log = LoggerFactory.getLogger(AppointmentServiceImpl.class);
 
     private final AppointmentRepository appointmentRepository;
@@ -67,6 +69,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (request.getAppointmentDate() == null) {
             throw new IllegalArgumentException("Appointment date is required");
         }
+        validateBookingLeadTime(request.getAppointmentDate(), request.getStartTime());
         LocalDate maxDate = LocalDate.now().plusDays(BOOKING_WINDOW_DAYS);
         if (request.getAppointmentDate().isAfter(maxDate)) {
             throw new IllegalStateException("Appointments can only be booked up to 45 days in advance");
@@ -82,6 +85,18 @@ public class AppointmentServiceImpl implements AppointmentService {
                 );
         if (clientBusy) {
             throw new IllegalStateException("You already have an appointment at this time");
+        }
+
+        // 1.5️⃣ Check if counselor slot is already taken (CONFIRMED or PENDING_PAYMENT)
+        boolean counselorBusy =
+                appointmentRepository.existsByCounselorIdAndAppointmentDateAndStartTimeAndStatusIn(
+                        request.getCounselorId(),
+                        request.getAppointmentDate(),
+                        request.getStartTime(),
+                        List.of(CONFIRMED, PENDING_PAYMENT)
+                );
+        if (counselorBusy) {
+            throw new IllegalStateException("Slot already taken");
         }
 
         // 2️⃣ Check slot availability via Availability Service
@@ -105,12 +120,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setStatus(PENDING_PAYMENT);
         appointment.setSlotLockedAt(LocalDateTime.now());
 
-        Appointment saved;
-        try {
-            saved = appointmentRepository.save(appointment);
-        } catch (DataIntegrityViolationException e) {
-            throw new IllegalStateException("Slot already taken", e);
-        }
+        Appointment saved = appointmentRepository.save(appointment);
 
         // 4️⃣ Block slot via Availability Service
         BlockSlotRequest blockRequest = BlockSlotRequest.builder()
@@ -162,6 +172,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (request.getNewDate() == null) {
             throw new IllegalArgumentException("New appointment date is required");
         }
+        validateBookingLeadTime(request.getNewDate(), request.getNewStartTime());
         LocalDate maxDate = LocalDate.now().plusDays(BOOKING_WINDOW_DAYS);
         if (request.getNewDate().isAfter(maxDate)) {
             throw new IllegalStateException("Appointments can only be booked up to 45 days in advance");
@@ -278,6 +289,111 @@ public class AppointmentServiceImpl implements AppointmentService {
             updateMeetingLink(updated);
         }
 
+        clearRescheduleProposal(updated);
+        updated = appointmentRepository.save(updated);
+
+        return attachMeetingLinkIfAvailable(mapToResponse(updated));
+    }
+
+    /**
+     * COUNSELOR proposes reschedule (client must accept/reject)
+     */
+    @Override
+    @Transactional
+    public AppointmentResponse requestRescheduleByCounselor(
+            Long appointmentId,
+            Long counselorId,
+            RescheduleAppointmentRequest request
+    ) {
+        if (request.getNewDate() == null) {
+            throw new IllegalArgumentException("New appointment date is required");
+        }
+        validateBookingLeadTime(request.getNewDate(), request.getNewStartTime());
+        LocalDate maxDate = LocalDate.now().plusDays(BOOKING_WINDOW_DAYS);
+        if (request.getNewDate().isAfter(maxDate)) {
+            throw new IllegalStateException("Appointments can only be booked up to 45 days in advance");
+        }
+
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        if (!appointment.getCounselorId().equals(counselorId)) {
+            throw new SecurityException("Not allowed to reschedule this appointment");
+        }
+
+        if (appointment.getStatus() == CANCELLED
+                || appointment.getStatus() == EXPIRED
+                || appointment.getStatus() == COMPLETED) {
+            throw new IllegalStateException("This appointment cannot be rescheduled");
+        }
+
+        if (appointment.getAppointmentDate().equals(request.getNewDate())
+                && appointment.getStartTime().equals(request.getNewStartTime())) {
+            throw new IllegalStateException("New time must be different from current time");
+        }
+
+        boolean available = callAvailabilityCheck(
+                appointment.getCounselorId(),
+                request.getNewDate(),
+                request.getNewStartTime()
+        );
+        if (!available) {
+            throw new IllegalStateException("New slot is not available");
+        }
+
+        appointment.setProposedDate(request.getNewDate());
+        appointment.setProposedStartTime(request.getNewStartTime());
+        appointment.setProposedEndTime(request.getNewStartTime().plusHours(SLOT_DURATION_HOURS));
+        appointment.setRescheduleRequestedBy("THERAPIST");
+
+        Appointment updated = appointmentRepository.save(appointment);
+        return attachMeetingLinkIfAvailable(mapToResponse(updated));
+    }
+
+    /**
+     * CLIENT accepts counselor proposal
+     */
+    @Override
+    @Transactional
+    public AppointmentResponse acceptRescheduleRequest(Long appointmentId, Long clientId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        if (!appointment.getClientId().equals(clientId)) {
+            throw new SecurityException("Not allowed to update this appointment");
+        }
+
+        if (appointment.getProposedDate() == null || appointment.getProposedStartTime() == null) {
+            throw new IllegalStateException("No reschedule proposal to accept");
+        }
+
+        RescheduleAppointmentRequest request = new RescheduleAppointmentRequest();
+        request.setNewDate(appointment.getProposedDate());
+        request.setNewStartTime(appointment.getProposedStartTime());
+
+        AppointmentResponse response = rescheduleAppointment(appointmentId, clientId, request);
+        return response;
+    }
+
+    /**
+     * CLIENT rejects counselor proposal
+     */
+    @Override
+    @Transactional
+    public AppointmentResponse rejectRescheduleRequest(Long appointmentId, Long clientId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        if (!appointment.getClientId().equals(clientId)) {
+            throw new SecurityException("Not allowed to update this appointment");
+        }
+
+        if (appointment.getProposedDate() == null && appointment.getProposedStartTime() == null) {
+            return attachMeetingLinkIfAvailable(mapToResponse(appointment));
+        }
+
+        clearRescheduleProposal(appointment);
+        Appointment updated = appointmentRepository.save(appointment);
         return attachMeetingLinkIfAvailable(mapToResponse(updated));
     }
 
@@ -450,6 +566,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .appointmentDate(a.getAppointmentDate())
                 .startTime(a.getStartTime())
                 .endTime(a.getEndTime())
+                .proposedDate(a.getProposedDate())
+                .proposedStartTime(a.getProposedStartTime())
+                .proposedEndTime(a.getProposedEndTime())
+                .rescheduleRequestedBy(a.getRescheduleRequestedBy())
                 .status(a.getStatus())
                 .paymentId(a.getPaymentId())
                 .createdAt(a.getCreatedAt())
@@ -463,6 +583,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .appointmentDate(a.getAppointmentDate())
                 .startTime(a.getStartTime())
                 .endTime(a.getEndTime())
+                .proposedDate(a.getProposedDate())
+                .proposedStartTime(a.getProposedStartTime())
+                .proposedEndTime(a.getProposedEndTime())
+                .rescheduleRequestedBy(a.getRescheduleRequestedBy())
                 .status(a.getStatus())
                 .build();
     }
@@ -471,6 +595,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (!shouldExposeMeetingLink(
                 response.getStatus(),
                 response.getAppointmentDate(),
+                response.getStartTime(),
                 response.getEndTime()
         )) {
             return response;
@@ -501,6 +626,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (!shouldExposeMeetingLink(
                 response.getStatus(),
                 response.getAppointmentDate(),
+                response.getStartTime(),
                 response.getEndTime()
         )) {
             return response;
@@ -525,16 +651,20 @@ public class AppointmentServiceImpl implements AppointmentService {
     private boolean shouldExposeMeetingLink(
             AppointmentStatus status,
             LocalDate appointmentDate,
+            LocalTime startTime,
             LocalTime endTime
     ) {
         if (status != CONFIRMED) {
             return false;
         }
-        if (appointmentDate == null || endTime == null) {
+        if (appointmentDate == null || startTime == null || endTime == null) {
             return false;
         }
+        LocalDateTime appointmentStart = LocalDateTime.of(appointmentDate, startTime);
         LocalDateTime appointmentEnd = LocalDateTime.of(appointmentDate, endTime);
-        return !appointmentEnd.isBefore(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now(IST_ZONE);
+        return !now.isBefore(appointmentStart.minusMinutes(10))
+                && !now.isAfter(appointmentEnd);
     }
 
     private String getMeetingLinkSafely(Long appointmentId) {
@@ -545,6 +675,27 @@ public class AppointmentServiceImpl implements AppointmentService {
             log.warn("Meeting link fetch failed for appointment {}", appointmentId, e);
             return null;
         }
+    }
+
+    private void validateBookingLeadTime(LocalDate date, LocalTime startTime) {
+        if (date == null || startTime == null) {
+            throw new IllegalArgumentException("Appointment date and time are required");
+        }
+        LocalDateTime now = LocalDateTime.now(IST_ZONE);
+        LocalDateTime target = LocalDateTime.of(date, startTime);
+        if (target.isBefore(now)) {
+            throw new IllegalStateException("Cannot book an appointment in the past");
+        }
+        if (target.isBefore(now.plusMinutes(BOOKING_LEAD_MINUTES))) {
+            throw new IllegalStateException("Appointments must be booked at least 1 hour in advance");
+        }
+    }
+
+    private void clearRescheduleProposal(Appointment appointment) {
+        appointment.setProposedDate(null);
+        appointment.setProposedStartTime(null);
+        appointment.setProposedEndTime(null);
+        appointment.setRescheduleRequestedBy(null);
     }
 
     private void ensureMeetingLink(Appointment appointment) {

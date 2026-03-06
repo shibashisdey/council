@@ -66,6 +66,11 @@
   text-decoration: line-through;
 }
 
+.slot.past {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
 .slot.selected {
   background: rgba(47, 125, 99, 0.15);
   border-color: rgba(47, 125, 99, 0.4);

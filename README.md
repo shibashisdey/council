@@ -67,7 +67,7 @@ StackFul Minds is a Spring Boot microservices system for therapy sessions. It in
 **Availability Service**
 Rules enforced:
 1. Working hours per counselor per weekday.
-2. Lunch break per counselor per weekday.
+2. Lunch break per counselor per weekday (optional).
 3. Unavailability blocks for leave/appointments.
 4. Public holidays (Nager.Date sync).
 5. Daily cap: max 7 confirmed appointments.
@@ -82,6 +82,10 @@ Endpoints:
 7. `POST /schedule/unavailability/{counselorId}`
 8. `DELETE /schedule/unavailability/{counselorId}/{unavailabilityId}`
 9. `GET /schedule/calendar/{counselorId}`
+10. `GET /schedule/{counselorId}`
+11. `GET /schedule/unavailability/{counselorId}/upcoming`
+12. `PUT /schedule/working-hours-safe/{counselorId}`
+13. `DELETE /schedule/working-hours-safe/{counselorId}/{dayOfWeek}`
 
 **Appointment Service**
 Core behavior:
@@ -92,6 +96,8 @@ Core behavior:
 5. Reschedule is all-or-nothing with compensation.
 6. Confirm updates availability block reason to `APPOINTMENT_CONFIRMED`.
 7. `counselorId` refers to counselor profile ID (not auth user id).
+8. Booking allowed only if start time is at least 1 hour in the future (IST).
+9. Meeting links are exposed only within the join window (10 minutes before start until end).
 
 Endpoints:
 1. `POST /appointments` — create appointment
@@ -103,11 +109,15 @@ Endpoints:
 7. `GET /appointments/{appointmentId}/status`
 8. `GET /appointments/{appointmentId}/internal`
 9. `PUT /appointments/{appointmentId}/complete`
+10. `PUT /appointments/{appointmentId}/reschedule/request` — counselor proposes new time
+11. `PUT /appointments/{appointmentId}/reschedule/accept` — client accepts proposal
+12. `PUT /appointments/{appointmentId}/reschedule/reject` — client rejects proposal
 
 **Payment Service**
 1. `POST /payments` — create payment (idempotent)
 2. `POST /payments/{appointmentId}/confirm` — confirm payment and confirm appointment
 3. `POST /payments/{appointmentId}/fail` — mark payment failed
+4. `POST /payments/{appointmentId}/simulate-success` — dev-only mock success
 
 Payment checks:
 1. Appointment must be `PENDING_PAYMENT` to create payment.
@@ -116,8 +126,9 @@ Payment checks:
 **Link Gererator Service (Internal)**
 1. `POST /internal/meeting-links` — create or get meeting link
 2. `GET /internal/meeting-links/{appointmentId}` — fetch link by appointment
-3. `PUT /internal/meeting-links/{appointmentId}` — update times
-4. `DELETE /internal/meeting-links/{appointmentId}` — delete link
+3. `GET /internal/meeting-links/{appointmentId}/join` — 302 redirect to meeting
+4. `PUT /internal/meeting-links/{appointmentId}` — update times
+5. `DELETE /internal/meeting-links/{appointmentId}` — delete link
 
 **Review Service**
 Two separate domains:
@@ -178,3 +189,4 @@ Set in `notification-service/src/main/resources/application.properties`:
 1. Most internal calls currently use fixed `localhost` URLs, not Eureka load balancing.
 2. API Gateway must be running for client-facing routes.
 3. Internal endpoints (ex: `/internal/**`, `/payments/*/confirm`) require internal JWT auth.
+4. Meeting links are exposed to clients/counselors only for confirmed appointments whose end time is not in the past.

@@ -280,6 +280,7 @@ erDiagram
 2. `counselor_lunch_breaks`
 3. `counselor_unavailability`
 4. `public_holidays`
+   - lunch breaks can be per-day and optional
 
 **Appointments**
 1. `appointments`
@@ -335,6 +336,10 @@ erDiagram
 7. `POST /schedule/unavailability/{counselorId}`
 8. `DELETE /schedule/unavailability/{counselorId}/{unavailabilityId}`
 9. `GET /schedule/calendar/{counselorId}`
+10. `GET /schedule/{counselorId}`
+11. `GET /schedule/unavailability/{counselorId}/upcoming`
+12. `PUT /schedule/working-hours-safe/{counselorId}`
+13. `DELETE /schedule/working-hours-safe/{counselorId}/{dayOfWeek}`
 
 **Appointments**
 1. `POST /appointments`
@@ -346,17 +351,22 @@ erDiagram
 7. `GET /appointments/{appointmentId}/status`
 8. `GET /appointments/{appointmentId}/internal`
 9. `PUT /appointments/{appointmentId}/complete`
+10. `PUT /appointments/{appointmentId}/reschedule/request`
+11. `PUT /appointments/{appointmentId}/reschedule/accept`
+12. `PUT /appointments/{appointmentId}/reschedule/reject`
 
 **Payments**
 1. `POST /payments`
 2. `POST /payments/{appointmentId}/confirm`
 3. `POST /payments/{appointmentId}/fail`
+4. `POST /payments/{appointmentId}/simulate-success` (dev-only)
 
 **Link Gererator Service (Internal)**
 1. `POST /internal/meeting-links`
 2. `GET /internal/meeting-links/{appointmentId}`
-3. `PUT /internal/meeting-links/{appointmentId}`
-4. `DELETE /internal/meeting-links/{appointmentId}`
+3. `GET /internal/meeting-links/{appointmentId}/join`
+4. `PUT /internal/meeting-links/{appointmentId}`
+5. `DELETE /internal/meeting-links/{appointmentId}`
 
 **Review Service**
 1. `POST /session-notes`
@@ -385,12 +395,15 @@ erDiagram
 1. Appointment service checks availability
 2. Appointment saved in `PENDING_PAYMENT`
 3. Availability slot blocked as `APPOINTMENT_HOLD`
+4. Booking requires start time at least 1 hour in the future (IST)
 
 **3) Payment**
 1. Payment created (INITIATED)
 2. Payment confirmed → appointment confirmed
 3. Link gererator creates meeting link for confirmed appointment
 4. Availability block updated to `APPOINTMENT_CONFIRMED`
+5. Meeting links are exposed to clients/counselors only for confirmed appointments whose end time is not in the past
+6. Join window is from 10 minutes before start until end time
 
 **4) Session Notes**
 1. Counselor creates note after appointment confirmed/completed

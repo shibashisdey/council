@@ -2,6 +2,7 @@ package com.council.reviewservice.controller;
 
 import com.council.reviewservice.client.CounselorClient;
 import com.council.reviewservice.dto.request.CreateSessionNoteRequest;
+import com.council.reviewservice.dto.request.ShareSessionNoteContentRequest;
 import com.council.reviewservice.dto.request.ShareSessionNoteRequest;
 import com.council.reviewservice.dto.request.UpdatePdfRequest;
 import com.council.reviewservice.dto.request.UpdateSessionNoteRequest;
@@ -59,6 +60,17 @@ public class SessionNoteController {
         requireTherapist(role);
         Long counselorId = requireCounselorId(requesterId);
         return ResponseEntity.ok(sessionNoteService.shareSessionNote(counselorId, noteId, request));
+    }
+
+    @PostMapping("/share")
+    public ResponseEntity<SessionNoteCounselorResponse> shareSessionNoteWithContent(
+            @RequestHeader("X-USER-ID") Long requesterId,
+            @RequestHeader("X-USER-ROLE") String role,
+            @RequestBody ShareSessionNoteContentRequest request
+    ) {
+        requireTherapist(role);
+        Long counselorId = requireCounselorId(requesterId);
+        return ResponseEntity.ok(sessionNoteService.shareSessionNoteWithContent(counselorId, request));
     }
 
     @PatchMapping("/{noteId}/pdf")
