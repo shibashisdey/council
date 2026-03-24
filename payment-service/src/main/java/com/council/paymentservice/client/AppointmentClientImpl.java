@@ -1,5 +1,6 @@
 package com.council.paymentservice.client;
 
+import com.council.paymentservice.dto.response.AppointmentInternalResponse;
 import com.council.paymentservice.dto.response.AppointmentStatusResponse;
 import com.council.paymentservice.security.InternalJwtService;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +45,15 @@ public class AppointmentClientImpl implements AppointmentClient {
                 .uri("/appointments/{id}/status", appointmentId)
                 .retrieve()
                 .bodyToMono(AppointmentStatusResponse.class)
+                .block();
+    }
+
+    @Override
+    public AppointmentInternalResponse getAppointmentInternal(Long appointmentId) {
+        return webClient.get()
+                .uri("/appointments/{id}/internal", appointmentId)
+                .retrieve()
+                .bodyToMono(AppointmentInternalResponse.class)
                 .block();
     }
 }

@@ -10,6 +10,8 @@ import com.council.notificationservice.dto.SessionNotePublicResponse;
 import com.council.notificationservice.dto.SessionNoteShareRequest;
 import com.council.notificationservice.dto.UserPublicResponse;
 import com.council.notificationservice.dto.UpdatePdfRequest;
+import com.council.notificationservice.messaging.EmailEventPublisher;
+import com.council.notificationservice.messaging.EmailNotificationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,19 +28,22 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserClient userClient;
     private final CounselorClient counselorClient;
     private final R2StorageService r2StorageService;
+    private final EmailEventPublisher emailEventPublisher;
 
     public NotificationServiceImpl(
             ReviewClient reviewClient,
             AppointmentClient appointmentClient,
             UserClient userClient,
             CounselorClient counselorClient,
-            R2StorageService r2StorageService
+            R2StorageService r2StorageService,
+            EmailEventPublisher emailEventPublisher
     ) {
         this.reviewClient = reviewClient;
         this.appointmentClient = appointmentClient;
         this.userClient = userClient;
         this.counselorClient = counselorClient;
         this.r2StorageService = r2StorageService;
+        this.emailEventPublisher = emailEventPublisher;
     }
 
     @Override
@@ -80,6 +85,7 @@ public class NotificationServiceImpl implements NotificationService {
             log.error("Failed to update review service with PDF info: noteId={}", noteId, e);
             throw e;
         }
+        publishSessionNoteSharedEvent(appointment, publicUrl);
     }
 
     @Override
@@ -124,6 +130,7 @@ public class NotificationServiceImpl implements NotificationService {
             log.error("Failed to update review service with PDF info: noteId={}", noteId, e);
             throw e;
         }
+        publishSessionNoteSharedEvent(appointment, publicUrl);
     }
 
     private String buildPdfPlaceholderContent(
@@ -173,5 +180,22 @@ public class NotificationServiceImpl implements NotificationService {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private void publishSessionNoteSharedEvent(AppointmentInternalResponse appointment, String pdfUrl) {
+        if (appointment == null) {
+            return;
+        }
+        emailEventPublisher.publish(EmailNotificationEvent.builder()
+                .eventType("SESSION_NOTE_SHARED")
+                .occurredAt(java.time.Instant.now())
+                .appointmentId(appointment.getAppointmentId())
+                .clientUserId(appointment.getClientId())
+                .counselorId(appointment.getCounselorId())
+                .appointmentDate(appointment.getAppointmentDate() != null ? appointment.getAppointmentDate().toString() : null)
+                .startTime(appointment.getStartTime() != null ? appointment.getStartTime().toString() : null)
+                .endTime(appointment.getEndTime() != null ? appointment.getEndTime().toString() : null)
+                .pdfUrl(pdfUrl)
+                .build());
     }
 }

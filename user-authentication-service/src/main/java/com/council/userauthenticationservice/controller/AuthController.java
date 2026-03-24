@@ -1,6 +1,7 @@
 package com.council.userauthenticationservice.controller;
 
 
+import com.council.userauthenticationservice.dto.UserInternalResponse;
 import com.council.userauthenticationservice.exception.UserAlreadyExistsException;
 import com.council.userauthenticationservice.model.LoginRequest;
 import com.council.userauthenticationservice.model.RegisterRequest;
@@ -28,5 +29,10 @@ public class AuthController {
     public Map<String, String> register(@RequestBody RegisterRequest request) throws UserAlreadyExistsException {
         service.register(request);
         return Map.of("message", "User registered successfully");
+    }
+
+    @GetMapping("/users/{userId}/internal")
+    public UserInternalResponse getUserInternal(@PathVariable Long userId) {
+        return service.getUserInternal(userId);
     }
 }

@@ -13,6 +13,8 @@ import com.council.appointmentservice.dto.response.AppointmentInternalResponse;
 import com.council.appointmentservice.dto.response.AppointmentResponse;
 import com.council.appointmentservice.dto.response.AppointmentStatusResponse;
 import com.council.appointmentservice.dto.response.CounselorAppointmentResponse;
+import com.council.appointmentservice.messaging.EmailEventPublisher;
+import com.council.appointmentservice.messaging.EmailNotificationEvent;
 import com.council.appointmentservice.model.Appointment;
 import com.council.appointmentservice.model.AppointmentStatus;
 import com.council.appointmentservice.repository.AppointmentRepository;
@@ -21,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -44,17 +47,20 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final AvailabilityClient availabilityClient;
     private final CounselorClient counselorClient;
     private final LinkGeneratorClient linkGeneratorClient;
+    private final EmailEventPublisher emailEventPublisher;
 
     public AppointmentServiceImpl(
             AppointmentRepository appointmentRepository,
             AvailabilityClient availabilityClient,
             CounselorClient counselorClient,
-            LinkGeneratorClient linkGeneratorClient
+            LinkGeneratorClient linkGeneratorClient,
+            EmailEventPublisher emailEventPublisher
     ) {
         this.appointmentRepository = appointmentRepository;
         this.availabilityClient = availabilityClient;
         this.counselorClient = counselorClient;
         this.linkGeneratorClient = linkGeneratorClient;
+        this.emailEventPublisher = emailEventPublisher;
     }
 
     /**
@@ -131,6 +137,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .referenceId(saved.getId())
                 .build();
         callAvailabilityBlock(blockRequest);
+        publishAppointmentEvent("APPOINTMENT_CREATED", saved, clientId, "CLIENT");
 
         return mapToResponse(saved);
     }
@@ -291,6 +298,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         clearRescheduleProposal(updated);
         updated = appointmentRepository.save(updated);
+        publishAppointmentEvent("APPOINTMENT_RESCHEDULED", updated, clientId, "CLIENT");
 
         return attachMeetingLinkIfAvailable(mapToResponse(updated));
     }
@@ -347,6 +355,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setRescheduleRequestedBy("THERAPIST");
 
         Appointment updated = appointmentRepository.save(appointment);
+        publishAppointmentEvent("APPOINTMENT_RESCHEDULE_REQUESTED", updated, counselorId, "THERAPIST");
         return attachMeetingLinkIfAvailable(mapToResponse(updated));
     }
 
@@ -371,8 +380,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         request.setNewDate(appointment.getProposedDate());
         request.setNewStartTime(appointment.getProposedStartTime());
 
-        AppointmentResponse response = rescheduleAppointment(appointmentId, clientId, request);
-        return response;
+        return rescheduleAppointment(appointmentId, clientId, request);
     }
 
     /**
@@ -394,6 +402,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         clearRescheduleProposal(appointment);
         Appointment updated = appointmentRepository.save(appointment);
+        publishAppointmentEvent("APPOINTMENT_RESCHEDULE_REJECTED", updated, clientId, "CLIENT");
         return attachMeetingLinkIfAvailable(mapToResponse(updated));
     }
 
@@ -446,6 +455,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         // Free the slot in availability service (idempotent)
         callAvailabilityFree(appointment.getId());
+        publishAppointmentEvent("APPOINTMENT_CANCELLED", appointment, requesterId, requesterRole);
     }
 
     /**
@@ -735,5 +745,20 @@ public class AppointmentServiceImpl implements AppointmentService {
         } catch (RuntimeException e) {
             log.warn("Meeting link delete failed for appointment {}", appointmentId, e);
         }
+    }
+
+    private void publishAppointmentEvent(String eventType, Appointment appointment, Long actorUserId, String actorRole) {
+        emailEventPublisher.publish(EmailNotificationEvent.builder()
+                .eventType(eventType)
+                .occurredAt(Instant.now())
+                .appointmentId(appointment.getId())
+                .clientUserId(appointment.getClientId())
+                .counselorId(appointment.getCounselorId())
+                .appointmentDate(appointment.getAppointmentDate() != null ? appointment.getAppointmentDate().toString() : null)
+                .startTime(appointment.getStartTime() != null ? appointment.getStartTime().toString() : null)
+                .endTime(appointment.getEndTime() != null ? appointment.getEndTime().toString() : null)
+                .actorUserId(actorUserId)
+                .actorRole(actorRole)
+                .build());
     }
 }

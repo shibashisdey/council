@@ -32,6 +32,7 @@
 		<module>appointment-service</module>
 		<module>review-service</module>
 		<module>notification-service</module>
+		<module>email-service</module>
 		<module>payment-service</module>
 		<module>product-webapp</module>
 		<module>user-service</module>

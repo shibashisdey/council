@@ -1,20 +1,21 @@
 # StackFul Minds
 
 **Overview**
-StackFul Minds is a Spring Boot microservices system for therapy sessions. It includes authentication, user and counselor profiles, appointment booking with availability rules, payments, session notes and reviews, and notification/PDF delivery via Cloudflare R2.
+StackFul Minds is a Spring Boot microservices system for therapy sessions. It includes authentication, user and counselor profiles, appointment booking with availability rules, payments, session notes and reviews, notification/PDF delivery via Cloudflare R2, and async email delivery through Kafka.
 
 **Services And Ports**
-1. `eureka-server` — `8761` (service registry)
-2. `api-gateway` — `8091`
-3. `user-authentication-service` — `8081`
-4. `counselor-service` — `8090`
-5. `appointment-service` — `8083`
-6. `availability-service` — `8085`
-7. `link-gererator-service` — `8082`
-8. `review-service` — `8086`
-9. `notification-service` — `8088`
-10. `payment-service` — `8087`
-11. `user-service` — `8084`
+1. `eureka-server` - `8761`
+2. `api-gateway` - `8091`
+3. `user-authentication-service` - `8081`
+4. `counselor-service` - `8090`
+5. `appointment-service` - `8083`
+6. `availability-service` - `8085`
+7. `link-gererator-service` - `8082`
+8. `review-service` - `8086`
+9. `notification-service` - `8088`
+10. `email-service` - `8092`
+11. `payment-service` - `8087`
+12. `user-service` - `8084`
 
 **High-Level Flow**
 1. Auth service registers and logs in users, issues JWT.
@@ -22,142 +23,71 @@ StackFul Minds is a Spring Boot microservices system for therapy sessions. It in
 3. User service stores client profiles.
 4. Counselor service stores therapist profiles and specializations.
 5. Appointment service orchestrates booking and calls availability service.
-6. Availability service enforces working hours, lunch breaks, unavailability, holidays, and daily caps.
-7. Payment service confirms appointments and updates availability.
-8. Link gererator service generates Jitsi meeting links for confirmed appointments.
-9. Review service stores counselor session notes and client reviews.
-10. Notification service generates PDF and uploads to Cloudflare R2.
+6. Payment service confirms appointments and triggers meeting-link creation.
+7. Review service manages note metadata and review records.
+8. Notification service uploads session-note PDFs to R2.
+9. Source services publish Kafka events and `email-service` sends mail asynchronously.
 
-**Auth And Gateway**
-1. JWT is issued by auth service.
-2. Gateway validates JWT and adds trusted headers:
-   - `X-USER-ID`
-   - `X-USER-EMAIL`
-   - `X-USER-ROLE`
-3. Gateway routes:
-   - `/auth/**` → auth service
-   - `/counselors/**` → counselor service
-   - `/users/**` → user service
-   - `/appointments/**` → appointment service
-   - `/reviews/**` → review service
-   - `/session-notes/**` → review service
-   - `/payments/**` → payment service
-   - `/schedule/**` → availability service
-4. Role checks currently enforced at gateway:
-   - `/counselors/**` allow `THERAPIST` for write, `CLIENT|THERAPIST` for read
-   - `/users/**` allow `CLIENT` only
+**Auth**
+1. `POST /auth/register`
+2. `POST /auth/login`
+3. `GET /auth/users/{userId}/internal` - internal lookup of auth email/role
 
-**User Authentication Service**
-1. `POST /auth/register` — register user with role (`CLIENT` or `THERAPIST`)
-2. `POST /auth/login` — returns JWT
-
-**User Service**
-1. `POST /users` — create user profile (client)
-2. `GET /users/me` — fetch own profile
-3. `PATCH /users/me` — update own profile
-4. `GET /users/{id}/public` — internal use only
-
-**Counselor Service**
-1. `POST /counselors` — create counselor profile (therapist)
-2. `GET /counselors/me` — fetch own profile
-3. `GET /counselors` — list active counselors
-4. `GET /counselors/{id}` — fetch counselor by id
-5. `PUT /counselors/{id}` — update counselor
-
-**Availability Service**
-Rules enforced:
-1. Working hours per counselor per weekday.
-2. Lunch break per counselor per weekday (optional).
-3. Unavailability blocks for leave/appointments.
-4. Public holidays (Nager.Date sync).
-5. Daily cap: max 7 confirmed appointments.
-
-Endpoints:
-1. `GET /internal/availability/check`
-2. `POST /internal/availability/block`
-3. `PUT /internal/availability/block/{referenceId}/reason`
-4. `POST /internal/availability/free/{referenceId}`
-5. `POST /schedule/working-hours/{counselorId}`
-6. `POST /schedule/lunch-break/{counselorId}`
-7. `POST /schedule/unavailability/{counselorId}`
-8. `DELETE /schedule/unavailability/{counselorId}/{unavailabilityId}`
-9. `GET /schedule/calendar/{counselorId}`
-10. `GET /schedule/{counselorId}`
-11. `GET /schedule/unavailability/{counselorId}/upcoming`
-12. `PUT /schedule/working-hours-safe/{counselorId}`
-13. `DELETE /schedule/working-hours-safe/{counselorId}/{dayOfWeek}`
-
-**Appointment Service**
-Core behavior:
-1. Checks client overlap.
-2. Checks availability before save.
-3. Blocks slot after save.
-4. Expires unpaid holds after 10 minutes and frees slots.
-5. Reschedule is all-or-nothing with compensation.
-6. Confirm updates availability block reason to `APPOINTMENT_CONFIRMED`.
-7. `counselorId` refers to counselor profile ID (not auth user id).
-8. Booking allowed only if start time is at least 1 hour in the future (IST).
-9. Meeting links are exposed only within the join window (10 minutes before start until end).
-
-Endpoints:
-1. `POST /appointments` — create appointment
-2. `GET /appointments/client` — list client appointments
-3. `GET /appointments/counselor/{counselorId}` — list counselor appointments
+**Appointments**
+1. `POST /appointments`
+2. `GET /appointments/client`
+3. `GET /appointments/counselor/{counselorId}`
 4. `PUT /appointments/{appointmentId}/reschedule`
 5. `DELETE /appointments/{appointmentId}`
 6. `PUT /appointments/{appointmentId}/confirm`
 7. `GET /appointments/{appointmentId}/status`
 8. `GET /appointments/{appointmentId}/internal`
 9. `PUT /appointments/{appointmentId}/complete`
-10. `PUT /appointments/{appointmentId}/reschedule/request` — counselor proposes new time
-11. `PUT /appointments/{appointmentId}/reschedule/accept` — client accepts proposal
-12. `PUT /appointments/{appointmentId}/reschedule/reject` — client rejects proposal
+10. `PUT /appointments/{appointmentId}/reschedule/request`
+11. `PUT /appointments/{appointmentId}/reschedule/accept`
+12. `PUT /appointments/{appointmentId}/reschedule/reject`
 
-**Payment Service**
-1. `POST /payments` — create payment (idempotent)
-2. `POST /payments/{appointmentId}/confirm` — confirm payment and confirm appointment
-3. `POST /payments/{appointmentId}/fail` — mark payment failed
-4. `POST /payments/{appointmentId}/simulate-success` — dev-only mock success
+Appointment events now published to Kafka:
+1. `APPOINTMENT_CREATED`
+2. `APPOINTMENT_CANCELLED`
+3. `APPOINTMENT_RESCHEDULE_REQUESTED`
+4. `APPOINTMENT_RESCHEDULED`
+5. `APPOINTMENT_RESCHEDULE_REJECTED`
 
-Payment checks:
-1. Appointment must be `PENDING_PAYMENT` to create payment.
-2. Confirm only if appointment is `PENDING_PAYMENT` or already `CONFIRMED`.
+**Payments**
+1. `POST /payments`
+2. `POST /payments/{appointmentId}/confirm`
+3. `POST /payments/{appointmentId}/fail`
+4. `POST /payments/{appointmentId}/simulate-success`
 
-**Link Gererator Service (Internal)**
-1. `POST /internal/meeting-links` — create or get meeting link
-2. `GET /internal/meeting-links/{appointmentId}` — fetch link by appointment
-3. `GET /internal/meeting-links/{appointmentId}/join` — 302 redirect to meeting
-4. `PUT /internal/meeting-links/{appointmentId}` — update times
-5. `DELETE /internal/meeting-links/{appointmentId}` — delete link
+Payment events now published to Kafka:
+1. `PAYMENT_CONFIRMED`
+2. `PAYMENT_FAILED`
 
-**Review Service**
-Two separate domains:
-1. Session Notes (counselor → user)
-2. Reviews (user → counselor)
+**Review / Notifications**
+1. `POST /session-notes/share` - share note content, upload PDF to R2, store metadata + `pdfUrl`
+2. `POST /notifications/session-note` - direct note-share pipeline into notification service
+3. `notification-service` publishes `SESSION_NOTE_SHARED` to Kafka after PDF upload succeeds
 
-Session Notes:
-1. `POST /session-notes` — therapist creates note
-2. `PUT /session-notes/{id}` — therapist updates note
-3. `PATCH /session-notes/{id}/share` — therapist shares note, completes appointment, triggers notification
-4. `PATCH /session-notes/{id}/pdf` — internal update of PDF metadata
-5. `GET /session-notes/user/{userId}` — client sees shared notes only
-6. `GET /session-notes/counselor/{counselorId}` — therapist sees all notes
-7. `GET /session-notes/appointment/{appointmentId}` — internal fetch
-8. `GET /session-notes/{noteId}/internal` — internal fetch by note id
+**Email Service**
+1. Consumes Kafka topic `council-email-events`
+2. Resolves recipients from auth/profile services
+3. Sends async SMTP mail for registration, booking, payment, cancellation, reschedule, and session-note-share events
 
-Reviews:
-1. `POST /reviews` — client review after appointment completed
-2. `GET /reviews/counselor/{counselorId}`
-3. `GET /reviews/user/{userId}`
+**Configuration**
+Kafka:
+1. `spring.kafka.bootstrap-servers`
+2. `email.kafka.topic`
 
-**Notification Service**
-1. `POST /notifications/session-note/{noteId}`
-2. Fetches note from review service
-3. Generates a PDF placeholder and uploads to Cloudflare R2
-4. Updates review service with `pdfObjectKey` and `pdfUrl`
+Email service:
+1. `email.sending.enabled`
+2. `email.from`
+3. `spring.mail.host`
+4. `spring.mail.port`
+5. `spring.mail.username`
+6. `spring.mail.password`
 
-**Cloudflare R2 Configuration**
-Set in `notification-service/src/main/resources/application.properties`:
+Notification service R2:
 1. `r2.endpoint`
 2. `r2.access-key`
 3. `r2.secret-key`
@@ -176,17 +106,9 @@ Set in `notification-service/src/main/resources/application.properties`:
 9. `payment-service`
 10. `review-service`
 11. `notification-service`
-
-**Postman Quick Start**
-1. Register therapist: `POST http://localhost:8081/auth/register`
-2. Login therapist: `POST http://localhost:8081/auth/login`
-3. Create counselor profile via gateway: `POST http://localhost:8091/counselors`
-4. Register client: `POST http://localhost:8081/auth/register`
-5. Login client: `POST http://localhost:8081/auth/login`
-6. Create user profile via gateway: `POST http://localhost:8091/users`
+12. `email-service`
 
 **Notes**
-1. Most internal calls currently use fixed `localhost` URLs, not Eureka load balancing.
-2. API Gateway must be running for client-facing routes.
-3. Internal endpoints (ex: `/internal/**`, `/payments/*/confirm`) require internal JWT auth.
-4. Meeting links are exposed to clients/counselors only for confirmed appointments whose end time is not in the past.
+1. `email-service` is safe to start with `email.sending.enabled=false`; it will log instead of sending.
+2. A working Kafka broker is required for async mail delivery.
+3. The local wrapper build is currently blocked until `JAVA_HOME` points to a valid JDK 17 installation.
